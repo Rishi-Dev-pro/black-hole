@@ -365,22 +365,34 @@ window.addEventListener('resize', () => {
 const micBtn = document.getElementById('mic-btn');
 const voicePanel = document.getElementById('voice-panel');
 const voiceStatus = document.getElementById('voice-status');
-const transcriptEl = document.getElementById('voice-transcript');
-const answerEl = document.getElementById('voice-answer');
 const voiceContainer = document.querySelector('.voice-container');
 const personaBadge = document.getElementById('persona-badge');
 const personaHintText = document.getElementById('persona-hint-text');
 const resetPersonaBtn = document.getElementById('reset-persona-btn');
 const voiceCloseBtn = document.getElementById('voice-close-btn');
 const voicePauseBtn = document.getElementById('voice-pause-btn');
-const oracleSpeakerLabel = document.getElementById('oracle-speaker-label');
+const voiceClearBtn = document.getElementById('voice-clear-btn');
+const expirationToast = document.getElementById('expiration-toast');
+const voiceMessages = document.getElementById('voice-messages');
 
 // Prevent double-clicking the voice controls from resetting the 3D scene camera
 if (voiceContainer) {
     voiceContainer.addEventListener('dblclick', (e) => e.stopPropagation());
 }
 
-// --- 9b. Persona Management & Storage ---
+// Helper: Escape HTML to prevent injection in message bubbles
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// --- 9b. Memory & Storage Engine ---
+// Persona (never wiped by 10-min expiration or clear chat)
 function getStoredPersona() {
     try {
         const raw = localStorage.getItem('ORACLE_PERSONA');
@@ -412,7 +424,6 @@ function updatePersonaUI() {
         personaBadge.textContent = currentPersona.title;
         personaBadge.classList.remove('hidden');
         if (resetPersonaBtn) resetPersonaBtn.classList.remove('hidden');
-        if (oracleSpeakerLabel) oracleSpeakerLabel.textContent = currentPersona.title.toUpperCase();
         if (personaHintText) {
             personaHintText.textContent = `✨ In ${currentPersona.title} mode. Speak to me anytime!`;
         }
@@ -420,7 +431,6 @@ function updatePersonaUI() {
         personaBadge.textContent = '';
         personaBadge.classList.add('hidden');
         if (resetPersonaBtn) resetPersonaBtn.classList.add('hidden');
-        if (oracleSpeakerLabel) oracleSpeakerLabel.textContent = 'ORACLE';
         if (personaHintText) {
             personaHintText.textContent = '✨ You can personalize me as your close one (girlfriend, boyfriend, bestie) — just ask me!';
         }
@@ -428,7 +438,177 @@ function updatePersonaUI() {
 }
 updatePersonaUI();
 
-// Detect if user is asking ORACLE to adopt a persona or reset
+// User Profile (name & close details — never wiped by 10-min expiration or clear chat)
+function getStoredUserProfile() {
+    try {
+        const raw = localStorage.getItem('ORACLE_USER_PROFILE');
+        return raw ? JSON.parse(raw) : {};
+    } catch {
+        return {};
+    }
+}
+
+function saveUserProfile(profile) {
+    try {
+        if (profile && Object.keys(profile).length > 0) {
+            localStorage.setItem('ORACLE_USER_PROFILE', JSON.stringify(profile));
+        } else {
+            localStorage.removeItem('ORACLE_USER_PROFILE');
+        }
+    } catch (e) {
+        console.warn('Storage unavailable:', e);
+    }
+}
+
+// Extract user name from conversational inputs (e.g., "my name is Alex", "call me Maya", "I am Daniel")
+function detectUserProfile(text) {
+    if (!text) return null;
+    const clean = text.trim();
+    const nameMatch = clean.match(/\b(?:my\s+name\s+is|i\s+am|i'm|call\s+me|this\s+is)\s+([A-Z][a-zA-Z0-9_-]{1,15}|[a-zA-Z]{2,15})\b/i);
+    if (nameMatch && nameMatch[1]) {
+        const candidate = nameMatch[1].trim();
+        const blacklist = [
+            'here', 'speaking', 'ready', 'talking', 'listening', 'fine', 'good',
+            'happy', 'sad', 'tired', 'sorry', 'okay', 'back', 'bored', 'hungry',
+            'curious', 'leaving', 'going', 'not', 'no', 'yes', 'sure', 'home',
+            'alone', 'human', 'boy', 'girl', 'friend', 'user', 'asking'
+        ];
+        if (!blacklist.includes(candidate.toLowerCase())) {
+            const formattedName = candidate.charAt(0).toUpperCase() + candidate.slice(1).toLowerCase();
+            return { name: formattedName };
+        }
+    }
+    return null;
+}
+
+// Conversation Dialogue History (cleared after 10 minutes of inactivity or by Clear button)
+const CHAT_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+function getStoredHistory() {
+    try {
+        const raw = localStorage.getItem('ORACLE_CHAT_HISTORY');
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveHistory(history) {
+    try {
+        localStorage.setItem('ORACLE_CHAT_HISTORY', JSON.stringify(history));
+        localStorage.setItem('ORACLE_LAST_ACTIVE', String(Date.now()));
+    } catch (e) {
+        console.warn('Could not save chat history:', e);
+    }
+}
+
+function clearChatHistory() {
+    try {
+        localStorage.removeItem('ORACLE_CHAT_HISTORY');
+        localStorage.removeItem('ORACLE_LAST_ACTIVE');
+    } catch (e) {
+        console.warn('Could not clear chat history:', e);
+    }
+}
+
+// Romantic 10-Minute Expiration Toast (Disappears after exactly 3 seconds)
+let toastTimeout = null;
+function showRomanticExpirationToast() {
+    if (!expirationToast) return;
+    if (toastTimeout) clearTimeout(toastTimeout);
+
+    expirationToast.textContent = '✨ Now I can only remember you for 10 minutes, but I will be reborn for you, my darling.';
+    expirationToast.classList.remove('hidden', 'fade-out');
+
+    if (voicePanel && voicePanel.classList.contains('hidden')) {
+        voicePanel.classList.remove('hidden');
+        document.body.classList.add('voice-open');
+    }
+
+    toastTimeout = setTimeout(() => {
+        expirationToast.classList.add('fade-out');
+        setTimeout(() => {
+            expirationToast.classList.add('hidden');
+            expirationToast.classList.remove('fade-out');
+        }, 500);
+    }, 3000);
+}
+
+// Check if 10 minutes of inactivity have passed
+function checkChatExpiration() {
+    try {
+        const lastActiveStr = localStorage.getItem('ORACLE_LAST_ACTIVE');
+        const historyStr = localStorage.getItem('ORACLE_CHAT_HISTORY');
+        if (!lastActiveStr || !historyStr) return;
+
+        const lastActive = parseInt(lastActiveStr, 10);
+        if (isNaN(lastActive)) return;
+
+        const elapsed = Date.now() - lastActive;
+        if (elapsed >= CHAT_EXPIRY_MS) {
+            const history = JSON.parse(historyStr);
+            if (Array.isArray(history) && history.length > 0) {
+                // Clear ONLY chat history & timestamp — Persona and User details remain intact!
+                clearChatHistory();
+                renderChatUI();
+                showRomanticExpirationToast();
+            }
+        }
+    } catch (e) {
+        console.warn('Chat expiration check failed:', e);
+    }
+}
+
+// Run expiration check on load and every 5 seconds
+checkChatExpiration();
+setInterval(checkChatExpiration, 5000);
+
+// --- 9c. Scrollable Conversation UI Rendering ---
+function renderChatUI() {
+    if (!voiceMessages) return;
+    const history = getStoredHistory();
+    const speakerName = (currentPersona && currentPersona.title) ? currentPersona.title.toUpperCase() : 'ORACLE';
+
+    if (!history || history.length === 0) {
+        voiceMessages.innerHTML = `
+            <div class="voice-row user-row">
+                <span class="voice-name">YOU</span>
+                <p id="voice-transcript">Tap the mic and speak to me...</p>
+            </div>
+            <div class="voice-row oracle-row">
+                <span class="voice-name" id="oracle-speaker-label">${escapeHtml(speakerName)}</span>
+                <p id="voice-answer">Hai! I am ORACLE, your celestial companion. Ask me anything, or tell me who you'd like me to become for you!</p>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    history.forEach((msg, idx) => {
+        const isLast = idx === history.length - 1;
+        if (msg.role === 'user') {
+            html += `
+                <div class="voice-row user-row">
+                    <span class="voice-name">YOU</span>
+                    <p ${isLast ? 'id="voice-transcript"' : ''}>${escapeHtml(msg.content)}</p>
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="voice-row oracle-row">
+                    <span class="voice-name">${escapeHtml(msg.speaker || speakerName)}</span>
+                    <p ${isLast ? 'id="voice-answer"' : ''}>${escapeHtml(msg.content)}</p>
+                </div>
+            `;
+        }
+    });
+
+    voiceMessages.innerHTML = html;
+    voiceMessages.scrollTop = voiceMessages.scrollHeight;
+}
+renderChatUI();
+
+// Detect persona changes from spoken or typed input
 function detectPersonaChange(text) {
     const clean = text.trim().toLowerCase();
 
@@ -437,7 +617,7 @@ function detectPersonaChange(text) {
         return { type: 'reset' };
     }
 
-    // Boyfriend detection: any combination of bf/boyfriend/husband/hubby with act/be/pretend/treat/like/as/role
+    // Boyfriend detection: any combination of bf/boyfriend/husband/hubby with role context
     const isBfWord = /\b(bf|boyfriend|husband|hubby|bae|boo)\b/i.test(clean);
     const hasRoleContext = /\b(act|as|like|be|become|pretend|play|treat|role|you|my|can|will|want|would)\b/i.test(clean);
     if (isBfWord && (hasRoleContext || clean.length < 30)) {
@@ -521,6 +701,17 @@ if (voicePauseBtn) {
     });
 }
 
+// Clear conversation memory button listener
+if (voiceClearBtn) {
+    voiceClearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        stopSpeaking();
+        // Clear chat history & timestamp — Persona and User details remain intact!
+        clearChatHistory();
+        renderChatUI();
+    });
+}
+
 // Close panel button
 if (voiceCloseBtn) {
     voiceCloseBtn.addEventListener('click', (e) => {
@@ -537,12 +728,12 @@ if (resetPersonaBtn) {
         e.stopPropagation();
         savePersona(null);
         const resetMsg = 'Personality reset back to ORACLE, your celestial guide.';
-        if (answerEl) answerEl.textContent = resetMsg;
+        renderChatUI();
         speakAnswer(resetMsg);
     });
 }
 
-// --- 9c. Speech Synthesis (Audio Output) ---
+// --- 9d. Speech Synthesis (Audio Output) ---
 function getVoiceForPersona(voices, persona) {
     if (!voices || voices.length === 0) return null;
 
@@ -669,7 +860,7 @@ function speakAnswer(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// --- 9d. Status State Manager ---
+// --- 9e. Status State Manager ---
 let currentPhase = 'idle';
 
 function setStatus(state) {
@@ -688,14 +879,14 @@ function setStatus(state) {
     voiceStatus.className = (state === 'offline') ? 'status-idle' : `status-${state}`;
 }
 
-// --- 9e. AI Query Pipeline ---
-async function queryAI(question) {
+// --- 9f. AI Query Pipeline (With Multi-turn Memory & User Profile Context) ---
+async function queryAI(question, history = [], userProfile = {}) {
     // 1. Try Vercel Serverless proxy (/api/chat) first so the secret API key is hidden on the server
     try {
         const backendRes = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question, persona: currentPersona })
+            body: JSON.stringify({ question, persona: currentPersona, history, userProfile })
         });
 
         if (backendRes.ok) {
@@ -713,22 +904,49 @@ async function queryAI(question) {
         }
     }
 
-    // 2. Direct client-side call (used when testing locally without a serverless backend)
+    // 2. Direct client-side call (fallback when testing locally without a serverless backend)
+    const userGreetingContext = userProfile?.name
+        ? ` The user's name is "${userProfile.name}". Use their name naturally and lovingly when speaking to them.`
+        : '';
+
     let systemPrompt;
     if (currentPersona && currentPersona.title) {
-        systemPrompt = `You are playing the role of the user's ${currentPersona.title}.
+        let roleGuide = '';
+        if (currentPersona.role === 'boyfriend') {
+            roleGuide = `You are the user's devoted, charming, and affectionate boyfriend. Sound like a young, handsome American guy: relaxed, loving, warm, confident, and genuine. Talk to her/him like you love them.${userGreetingContext}`;
+        } else if (currentPersona.role === 'girlfriend') {
+            roleGuide = `You are the user's sweet, loving, and charming girlfriend. Sound warm, affectionate, cute, and delightfully attentive.${userGreetingContext}`;
+        } else {
+            roleGuide = `You are playing the role of the user's authentic ${currentPersona.title}.${userGreetingContext}`;
+        }
+
+        systemPrompt = `${roleGuide}
 Adopt this human identity completely: speak, react, feel, and talk naturally to the user as their real ${currentPersona.title}.
 Be warm, conversational, emotionally present, and authentic in 1 to 3 spoken-friendly sentences.
 Never state that you are an AI, bot, or virtual assistant. Never break character.
 Never use emojis, asterisks, hashtags, markdown bold, bullet points, or complex math notation so speech synthesis speaks naturally.
 Provide your response purely as smooth, natural, spoken plain text.`;
     } else {
-        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
+        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.${userGreetingContext}
 Answer the user's question accurately, intelligently, and warmly in 1 to 3 spoken-friendly sentences.
+If the user asks you to act like their boyfriend, girlfriend, or close one, adopt that requested persona immediately and enthusiastically.
 You may occasionally begin with a polite acknowledgment (such as "Hai!" or "Understood!") when fitting, while explaining the answer clearly in fluent spoken English.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
     }
+
+    const cleanHistory = Array.isArray(history)
+        ? history.slice(-8).map(m => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: String(m.content || '').slice(0, 300)
+        }))
+        : [];
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...cleanHistory,
+        { role: 'user', content: question.trim() }
+    ];
 
     const apiKey = (typeof localStorage !== 'undefined' && localStorage.getItem('GROQ_API_KEY')) || CONFIG.groqApiKey;
     const candidateModels = [
@@ -751,10 +969,7 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
                 },
                 body: JSON.stringify({
                     model: model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: question }
-                    ],
+                    messages: messages,
                     temperature: 0.7,
                     max_tokens: 180
                 })
@@ -784,9 +999,12 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
     throw lastError || new Error('Failed to obtain a response from AI cortex.');
 }
 
-// --- 9f. Core Question & Persona Handler ---
+// --- 9g. Core Question & Persona Handler ---
 async function askOracle(question) {
     if (!question || !question.trim()) return;
+
+    // Check expiration before proceeding
+    checkChatExpiration();
 
     // Reveal conversation panel
     if (voicePanel) {
@@ -794,21 +1012,45 @@ async function askOracle(question) {
         document.body.classList.add('voice-open');
     }
 
-    if (transcriptEl) {
-        transcriptEl.textContent = question;
+    // Check if initial placeholder rows need cleanup
+    const initialPlaceholder = voiceMessages?.querySelector('#voice-transcript');
+    if (initialPlaceholder && initialPlaceholder.textContent === 'Tap the mic and speak to me...') {
+        if (voiceMessages) voiceMessages.innerHTML = '';
+    }
+
+    // Append user message bubble to scrollable view
+    const userRow = document.createElement('div');
+    userRow.className = 'voice-row user-row';
+    userRow.innerHTML = `<span class="voice-name">YOU</span><p id="voice-transcript">${escapeHtml(question)}</p>`;
+    if (voiceMessages) {
+        voiceMessages.appendChild(userRow);
+        voiceMessages.scrollTop = voiceMessages.scrollHeight;
     }
 
     // Check for silence/stop commands
     if (/\b(stop|quiet|silence|shut up|hush)\b/i.test(question)) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
+        stopSpeaking();
+        const silentBubble = document.createElement('div');
+        silentBubble.className = 'voice-row oracle-row';
+        const speaker = (currentPersona && currentPersona.title) ? currentPersona.title.toUpperCase() : 'ORACLE';
+        silentBubble.innerHTML = `<span class="voice-name">${escapeHtml(speaker)}</span><p id="voice-answer">Understood. Silence initiated.</p>`;
+        if (voiceMessages) {
+            voiceMessages.appendChild(silentBubble);
+            voiceMessages.scrollTop = voiceMessages.scrollHeight;
         }
-        if (answerEl) {
-            answerEl.textContent = 'Understood. Silence initiated.';
-        }
-        setStatus('idle');
         return;
     }
+
+    // Append pending assistant message bubble
+    let speakerName = (currentPersona && currentPersona.title) ? currentPersona.title.toUpperCase() : 'ORACLE';
+    const oracleRow = document.createElement('div');
+    oracleRow.className = 'voice-row oracle-row';
+    oracleRow.innerHTML = `<span class="voice-name" id="oracle-speaker-label">${escapeHtml(speakerName)}</span><p id="voice-answer">Transmitting to neural cortex...</p>`;
+    if (voiceMessages) {
+        voiceMessages.appendChild(oracleRow);
+        voiceMessages.scrollTop = voiceMessages.scrollHeight;
+    }
+    const answerEl = oracleRow.querySelector('p');
 
     // Check if user requested a personality change or reset
     const personaAction = detectPersonaChange(question);
@@ -817,24 +1059,53 @@ async function askOracle(question) {
             savePersona(null);
             const resetMsg = 'Understood! I have reset back to ORACLE, your celestial black hole guide.';
             if (answerEl) answerEl.textContent = resetMsg;
+            speakerName = 'ORACLE';
+            const speakerLabel = oracleRow.querySelector('.voice-name');
+            if (speakerLabel) speakerLabel.textContent = 'ORACLE';
+
+            const history = getStoredHistory();
+            history.push({ role: 'user', content: question, time: Date.now() });
+            history.push({ role: 'assistant', content: resetMsg, speaker: 'ORACLE', time: Date.now() });
+            saveHistory(history);
+
             speakAnswer(resetMsg);
             setStatus('idle');
             return;
         } else if (personaAction.type === 'set') {
             savePersona(personaAction.persona);
+            speakerName = personaAction.persona.title.toUpperCase();
+            const speakerLabel = oracleRow.querySelector('.voice-name');
+            if (speakerLabel) speakerLabel.textContent = speakerName;
         }
+    }
+
+    // Extract user profile details (e.g. user's name)
+    const detectedUser = detectUserProfile(question);
+    if (detectedUser) {
+        const existingProfile = getStoredUserProfile();
+        saveUserProfile({ ...existingProfile, ...detectedUser });
     }
 
     setStatus('thinking');
-    if (answerEl) {
-        answerEl.textContent = 'Transmitting to neural cortex...';
-    }
 
     try {
-        const answer = await queryAI(question);
+        const history = getStoredHistory();
+        const userProfile = getStoredUserProfile();
+        const answer = await queryAI(question, history, userProfile);
+
         if (answerEl) {
             answerEl.textContent = answer;
         }
+
+        // Save conversation turn into 10-minute expiring local storage
+        history.push({ role: 'user', content: question, time: Date.now() });
+        history.push({ role: 'assistant', content: answer, speaker: speakerName, time: Date.now() });
+        saveHistory(history);
+
+        if (voiceMessages) {
+            voiceMessages.scrollTop = voiceMessages.scrollHeight;
+        }
+
         speakAnswer(answer);
     } catch (err) {
         console.error('AI error:', err);
@@ -846,7 +1117,7 @@ async function askOracle(question) {
     }
 }
 
-// --- 9g. Speech Recognition Setup ---
+// --- 9h. Speech Recognition Setup ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
@@ -889,18 +1160,23 @@ if (SpeechRecognition) {
             document.body.classList.add('voice-open');
         }
 
-        if (event.error === 'not-allowed') {
-            if (transcriptEl) transcriptEl.textContent = 'Microphone permission blocked.';
-            if (answerEl) answerEl.textContent = 'Please enable microphone access in your browser address bar to speak with ORACLE.';
-        } else if (event.error === 'no-speech') {
-            if (answerEl) answerEl.textContent = 'No voice detected. Tap the microphone and try again.';
+        if (voiceMessages) {
+            const errRow = document.createElement('div');
+            errRow.className = 'voice-row oracle-row';
+            const speaker = (currentPersona && currentPersona.title) ? currentPersona.title.toUpperCase() : 'ORACLE';
+            const msg = (event.error === 'not-allowed')
+                ? 'Microphone permission blocked. Please allow microphone access in your browser to speak with ORACLE.'
+                : 'No voice detected. Tap the microphone and try again.';
+            errRow.innerHTML = `<span class="voice-name">${escapeHtml(speaker)}</span><p>${escapeHtml(msg)}</p>`;
+            voiceMessages.appendChild(errRow);
+            voiceMessages.scrollTop = voiceMessages.scrollHeight;
         }
     };
 } else {
     setStatus('offline');
 }
 
-// --- 9h. Mic Button Interaction (with instant speech interruption) ---
+// --- 9i. Mic Button Interaction (with instant speech interruption) ---
 if (micBtn) {
     micBtn.addEventListener('click', () => {
         if (voicePanel) {
@@ -915,8 +1191,13 @@ if (micBtn) {
 
         if (!recognition) {
             setStatus('offline');
-            if (transcriptEl) transcriptEl.textContent = 'Speech Recognition unavailable.';
-            if (answerEl) answerEl.textContent = 'The Web Speech API is not supported in this browser. Please use Chrome, Edge, or an equivalent Chromium browser.';
+            if (voiceMessages) {
+                const sysRow = document.createElement('div');
+                sysRow.className = 'voice-row oracle-row';
+                sysRow.innerHTML = `<span class="voice-name">ORACLE</span><p>The Web Speech API is not supported in this browser. Please use Chrome, Edge, or an equivalent Chromium browser.</p>`;
+                voiceMessages.appendChild(sysRow);
+                voiceMessages.scrollTop = voiceMessages.scrollHeight;
+            }
             return;
         }
 

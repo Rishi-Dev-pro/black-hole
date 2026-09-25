@@ -481,12 +481,79 @@ html, body {
     animation: statusPulse 1.4s ease-in-out infinite;
 }
 
-/* Panel body — chat rows */
+/* Clear chat history button */
+.voice-clear-btn {
+    background: rgba(255, 160, 80, 0.1);
+    border: 1px solid rgba(255, 160, 80, 0.28);
+    color: rgba(255, 200, 150, 0.8);
+    font-size: 9.5px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.2s ease;
+}
+
+.voice-clear-btn:hover {
+    background: rgba(255, 160, 80, 0.25);
+    border-color: rgba(255, 180, 100, 0.5);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 140, 50, 0.35);
+}
+
+/* Romantic 10-Minute Expiration Toast */
+.expiration-toast {
+    padding: 8px 12px;
+    margin: 8px 12px 2px;
+    background: linear-gradient(135deg, rgba(255, 105, 180, 0.22), rgba(255, 140, 50, 0.22));
+    border: 1px solid rgba(255, 140, 180, 0.45);
+    border-radius: 10px;
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: #ffdce5;
+    text-align: center;
+    font-style: italic;
+    text-shadow: 0 0 10px rgba(255, 105, 180, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    animation: toastFadeIn 0.4s ease-out;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.expiration-toast.hidden {
+    display: none;
+}
+
+.expiration-toast.fade-out {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+
+@keyframes toastFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Panel body — scrollable without any visible side scrollbar */
 .voice-body {
     padding: 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-height: 230px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;       /* Firefox — hides scrollbar */
+    -ms-overflow-style: none;     /* IE / Edge — hides scrollbar */
+}
+
+/* Chrome, Safari, Android — hides ugly scrollbar */
+.voice-body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .voice-row {
@@ -496,6 +563,7 @@ html, body {
     padding: 10px 14px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.03);
+    flex-shrink: 0;
 }
 
 .user-row {
@@ -523,10 +591,7 @@ html, body {
     font-weight: 300;
     line-height: 1.55;
     color: rgba(255, 255, 255, 0.85);
-    max-height: 140px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 150, 60, 0.3) transparent;
+    word-break: break-word;
 }
 
 /* ---------- Mic Button ---------- */

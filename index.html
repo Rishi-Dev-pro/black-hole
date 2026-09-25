@@ -71,6 +71,8 @@
                     <span id="persona-badge" class="persona-tag hidden" title="Current personality"></span>
                 </div>
                 <div class="voice-header-actions">
+                    <!-- Clear chat history button -->
+                    <button id="voice-clear-btn" class="voice-clear-btn" title="Clear conversation history" aria-label="Clear chat">🗑️ Clear</button>
                     <!-- Pause/Stop button when AI is speaking -->
                     <button id="voice-pause-btn" class="voice-pause-btn hidden" title="Stop speech" aria-label="Stop speech">⏹ Stop</button>
                     <span id="voice-status" class="status-idle">OFFLINE</span>
@@ -84,7 +86,13 @@
                 <button id="reset-persona-btn" class="persona-reset-btn hidden" title="Reset personality back to ORACLE">↺ Reset</button>
             </div>
 
-            <div class="voice-body">
+            <!-- Romantic 10-Minute Expiration Toast (Fades away after 3s) -->
+            <div id="expiration-toast" class="expiration-toast hidden">
+                ✨ Now I can only remember you for 10 minutes, but I will be reborn for you, my darling.
+            </div>
+
+            <!-- Scrollable Conversation Messages (no visible side scrollbar) -->
+            <div id="voice-messages" class="voice-body">
                 <!-- What you said -->
                 <div class="voice-row user-row">
                     <span class="voice-name">YOU</span>

@@ -1,5 +1,5 @@
 // Vercel Serverless Function — api/chat.js
-// Secures your AI API key on the backend (never exposed to visitors)
+// Secures your AI API key on the backend with multi-turn conversation memory
 
 export default async function handler(req, res) {
     // CORS headers
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { question, persona } = req.body || {};
+    const { question, persona, history = [], userProfile = {} } = req.body || {};
     if (!question || typeof question !== 'string' || !question.trim()) {
         return res.status(400).json({ error: 'Missing or invalid "question" in request body.' });
     }
@@ -32,15 +32,19 @@ export default async function handler(req, res) {
         });
     }
 
+    const userGreetingContext = userProfile?.name
+        ? ` The user's name is "${userProfile.name}". Use their name naturally and lovingly when speaking to them.`
+        : '';
+
     let systemPrompt;
     if (persona && persona.title) {
         let roleGuide = '';
         if (persona.role === 'boyfriend') {
-            roleGuide = 'You are the user\'s devoted, charming, and affectionate boyfriend. Sound like a young, handsome American guy: relaxed, loving, warm, confident, and genuine. Talk to her/him like you love them.';
+            roleGuide = `You are the user's devoted, charming, and affectionate boyfriend. Sound like a young, handsome American guy: relaxed, loving, warm, confident, and genuine. Talk to her/him like you love them.${userGreetingContext}`;
         } else if (persona.role === 'girlfriend') {
-            roleGuide = 'You are the user\'s sweet, loving, and charming girlfriend. Sound warm, affectionate, cute, and delightfully attentive.';
+            roleGuide = `You are the user's sweet, loving, and charming girlfriend. Sound warm, affectionate, cute, and delightfully attentive.${userGreetingContext}`;
         } else {
-            roleGuide = `You are playing the role of the user's authentic ${persona.title}.`;
+            roleGuide = `You are playing the role of the user's authentic ${persona.title}.${userGreetingContext}`;
         }
 
         systemPrompt = `${roleGuide}
@@ -51,12 +55,26 @@ ABSOLUTE RULES:
 - Never use emojis, asterisks (*sigh*, *smiles*), hashtags, markdown bold, bullet points, or complex math notation so speech synthesis speaks as pure authentic human speech.
 - Provide your response purely as smooth, natural, spoken plain text.`;
     } else {
-        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
+        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.${userGreetingContext}
 Answer the user's question accurately, intelligently, and warmly in 1 to 3 spoken-friendly sentences.
 CRITICAL: If the user asks you to act like their boyfriend, girlfriend, or close one (e.g. "can you act as like my BF"), DO NOT refuse! Enthusiastically adopt that requested persona immediately and answer in full character without any AI disclaimers.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
     }
+
+    // Include recent conversation context (up to last 8 turns)
+    const cleanHistory = Array.isArray(history)
+        ? history.slice(-8).map(m => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: String(m.content || '').slice(0, 300)
+        }))
+        : [];
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...cleanHistory,
+        { role: 'user', content: question.trim() }
+    ];
 
     const candidateModels = [
         'qwen/qwen3.8-27b',
@@ -76,10 +94,7 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
                 },
                 body: JSON.stringify({
                     model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: question.trim() }
-                    ],
+                    messages,
                     temperature: 0.7,
                     max_tokens: 180
                 })
