@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Black Hole — 3D Simulation</title>
 
     <!-- CSS file (Part 2) -->
@@ -27,10 +27,12 @@
 
     <!-- ===== Controls Hint ===== -->
     <div class="controls-hint">
-        <span>🖱️ Drag to orbit</span>
-        <span>🔍 Scroll to zoom</span>
-        <span>⌨️ WASD to fly</span>
-        <span>🎙️ Click mic to talk</span>
+        <span class="desktop-hint">🖱️ Drag to orbit</span>
+        <span class="desktop-hint">🔍 Scroll to zoom</span>
+        <span class="desktop-hint">⌨️ WASD to fly</span>
+        <span class="mobile-hint">👆 Drag to orbit</span>
+        <span class="mobile-hint">🤏 Pinch to zoom</span>
+        <span>🎙️ Tap mic to talk</span>
     </div>
 
     <!-- ===== HUD Stats ===== -->
@@ -50,42 +52,46 @@
     </div>
 
     <!-- ============================================================
-         NEW: VOICE ASSISTANT — ORACLE
+         VOICE ASSISTANT — ORACLE
          Mic button + conversation panel
     ============================================================ -->
     <div class="voice-container">
 
-        <!-- Conversation Panel (appears when mic is used) -->
+        <!-- Conversation Panel (appears when mic is used or clicked) -->
         <div id="voice-panel" class="hidden">
             <div class="voice-header">
-                <span class="voice-title">🔮 ORACLE</span>
-                <span id="voice-status" class="status-idle">OFFLINE</span>
+                <div class="voice-header-left">
+                    <span class="voice-title">🔮 ORACLE</span>
+                    <span id="persona-badge" class="persona-tag hidden" title="Current personality"></span>
+                </div>
+                <div class="voice-header-actions">
+                    <span id="voice-status" class="status-idle">OFFLINE</span>
+                    <button id="voice-close-btn" class="voice-close-btn" title="Close panel" aria-label="Close panel">✕</button>
+                </div>
+            </div>
+
+            <!-- Companion Personalization Notice -->
+            <div class="persona-hint">
+                <span id="persona-hint-text">✨ You can personalize me as your close one (girlfriend, boyfriend, bestie) — just ask me!</span>
+                <button id="reset-persona-btn" class="persona-reset-btn hidden" title="Reset personality back to ORACLE">↺ Reset</button>
             </div>
 
             <div class="voice-body">
                 <!-- What you said -->
                 <div class="voice-row user-row">
                     <span class="voice-name">YOU</span>
-                    <p id="voice-transcript">Press the mic and ask me something...</p>
+                    <p id="voice-transcript">Tap the mic and speak to me...</p>
                 </div>
                 <!-- What ORACLE answered -->
                 <div class="voice-row oracle-row">
-                    <span class="voice-name">ORACLE</span>
-                    <p id="voice-answer">Hai! I am ORACLE, your celestial guide. Ask me anything about this black hole or the universe!</p>
+                    <span class="voice-name" id="oracle-speaker-label">ORACLE</span>
+                    <p id="voice-answer">Hai! I am ORACLE, your celestial companion. Ask me anything, or tell me who you'd like me to become for you!</p>
                 </div>
-            </div>
-
-            <!-- Example questions the user can try -->
-            <div class="voice-examples">
-                <span class="example-chip">"what is pythagoras theorem"</span>
-                <span class="example-chip">"who is the prime minister of india"</span>
-                <span class="example-chip">"area of circle formula"</span>
-                <span class="example-chip">"who is the president of usa"</span>
             </div>
         </div>
 
         <!-- Mic Button -->
-        <button id="mic-btn" title="Talk to ORACLE">
+        <button id="mic-btn" title="Talk to ORACLE" aria-label="Microphone">
             <!-- Mic icon (inline SVG so no image files needed) -->
             <svg id="mic-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2C10.34 2 9 3.34 9 5V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V5C15 3.34 13.66 2 12 2Z" fill="currentColor"/>

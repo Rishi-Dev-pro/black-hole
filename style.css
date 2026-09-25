@@ -157,8 +157,17 @@ html, body {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     background: rgba(0, 0, 0, 0.25);
     transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.mobile-hint {
+    display: none;
+}
+
+.desktop-hint {
+    display: inline-block;
 }
 
 .controls-hint span:hover {
@@ -248,17 +257,108 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid rgba(255, 160, 80, 0.12);
     background: rgba(255, 140, 50, 0.04);
+}
+
+.voice-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .voice-title {
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.18em;
     color: #ffc46b;
     text-shadow: 0 0 12px rgba(255, 150, 60, 0.4);
+}
+
+.persona-tag {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(255, 105, 180, 0.25), rgba(255, 160, 80, 0.25));
+    border: 1px solid rgba(255, 140, 180, 0.45);
+    color: #ffb6c1;
+    text-shadow: 0 0 8px rgba(255, 105, 180, 0.4);
+    box-shadow: 0 0 12px rgba(255, 105, 180, 0.2);
+    text-transform: capitalize;
+}
+
+.persona-tag.hidden {
+    display: none;
+}
+
+.voice-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.voice-close-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    line-height: 1;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.voice-close-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Companion Personalization Notice */
+.persona-hint {
+    padding: 8px 14px;
+    background: rgba(255, 150, 60, 0.05);
+    border-bottom: 1px solid rgba(255, 160, 80, 0.09);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: rgba(255, 210, 165, 0.7);
+}
+
+.persona-hint span {
+    flex: 1;
+}
+
+.persona-reset-btn {
+    background: rgba(255, 90, 90, 0.15);
+    border: 1px solid rgba(255, 120, 120, 0.4);
+    color: #ff9e9e;
+    font-size: 9.5px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.persona-reset-btn:hover {
+    background: rgba(255, 90, 90, 0.35);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 90, 90, 0.3);
+}
+
+.persona-reset-btn.hidden {
+    display: none;
 }
 
 /* Status badge — JS swaps these classes */
@@ -342,38 +442,9 @@ html, body {
     line-height: 1.55;
     color: rgba(255, 255, 255, 0.85);
     max-height: 140px;
-    overflow-y: auto;           /* long answers scroll instead of stretching */
+    overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 150, 60, 0.3) transparent;
-}
-
-/* Example question chips */
-.voice-examples {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 0 12px 12px;
-}
-
-.example-chip {
-    font-size: 10px;
-    font-weight: 300;
-    letter-spacing: 0.05em;
-    padding: 5px 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 160, 80, 0.2);
-    color: rgba(255, 200, 150, 0.7);
-    background: rgba(255, 140, 50, 0.04);
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.25s ease;
-}
-
-.example-chip:hover {
-    color: #ffc46b;
-    border-color: rgba(255, 160, 80, 0.55);
-    background: rgba(255, 140, 50, 0.15);
-    box-shadow: 0 0 12px rgba(255, 140, 50, 0.25);
 }
 
 /* ---------- Mic Button ---------- */
@@ -470,17 +541,34 @@ html, body {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+/* ============================================================
+   RESPONSIVE DESIGN (Tablets & Mobile Phones)
+   ============================================================ */
 @media (max-width: 768px) {
-    .hud {
-        bottom: 90px;           /* moves above the controls hint */
-        left: 20px;
-        gap: 10px;
+    .title {
+        font-size: clamp(26px, 8vw, 36px);
+        letter-spacing: 0.28em;
+    }
+
+    .subtitle {
+        font-size: 10px;
+        letter-spacing: 0.25em;
+    }
+
+    .desktop-hint {
+        display: none !important;
+    }
+
+    .mobile-hint {
+        display: inline-block !important;
     }
 
     .controls-hint {
-        gap: 10px;
+        bottom: 24px;
+        gap: 8px;
         flex-wrap: wrap;
-        padding: 0 16px;
+        padding: 0 12px;
+        pointer-events: none;
     }
 
     .controls-hint span {
@@ -488,20 +576,37 @@ html, body {
         padding: 4px 10px;
     }
 
-    .stat-value {
-        font-size: 12px;
+    /* On mobile, if voice panel is open, tuck hints away */
+    body.voice-open .controls-hint {
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
     }
 
-    /* NEW: voice UI on mobile */
+    .hud {
+        bottom: 76px;
+        left: 18px;
+        gap: 8px;
+    }
+
+    .stat-label {
+        font-size: 8px;
+        letter-spacing: 0.2em;
+    }
+
+    .stat-value {
+        font-size: 11px;
+    }
+
     .voice-container {
-        bottom: 20px;
-        right: 16px;
+        bottom: max(16px, env(safe-area-inset-bottom, 16px));
+        right: max(16px, env(safe-area-inset-right, 16px));
         gap: 12px;
     }
 
     #mic-btn {
-        width: 54px;
-        height: 54px;
+        width: 56px;
+        height: 56px;
     }
 
     #mic-icon {
@@ -510,11 +615,71 @@ html, body {
     }
 
     #voice-panel {
-        width: calc(100vw - 32px);
+        width: min(380px, calc(100vw - 28px));
+        max-height: 58vh;
+        border-radius: 14px;
+    }
+
+    .voice-body {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .voice-row {
+        padding: 8px 12px;
     }
 
     .voice-body p {
         font-size: 12px;
-        max-height: 100px;
+        line-height: 1.5;
+        max-height: 90px;
+    }
+}
+
+/* Extra small mobile phones (e.g. iPhone SE, 360px screens) */
+@media (max-width: 480px) {
+    .ui-overlay {
+        top: max(16px, env(safe-area-inset-top, 16px));
+        left: max(16px, env(safe-area-inset-left, 16px));
+    }
+
+    .title {
+        font-size: 24px;
+    }
+
+    .hud {
+        position: fixed;
+        top: max(16px, env(safe-area-inset-top, 16px));
+        right: max(16px, env(safe-area-inset-right, 16px));
+        bottom: auto;
+        left: auto;
+        flex-direction: row;
+        gap: 10px;
+        background: rgba(8, 8, 14, 0.45);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 160, 80, 0.14);
+        padding: 6px 10px;
+        border-radius: 10px;
+    }
+
+    .stat {
+        border-left: none;
+        border-bottom: 2px solid rgba(255, 150, 60, 0.6);
+        padding-left: 0;
+        padding-bottom: 2px;
+        gap: 1px;
+    }
+
+    .stat-label {
+        font-size: 7px;
+    }
+
+    .stat-value {
+        font-size: 9.5px;
+    }
+
+    #voice-panel {
+        width: calc(100vw - 24px);
     }
 }

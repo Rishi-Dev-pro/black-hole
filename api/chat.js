@@ -1,5 +1,5 @@
 // Vercel Serverless Function — api/chat.js
-// Secures your Groq API key on the backend (never exposed to visitors)
+// Secures your AI API key on the backend (never exposed to visitors)
 
 export default async function handler(req, res) {
     // CORS headers
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const { question } = req.body || {};
+    const { question, persona } = req.body || {};
     if (!question || typeof question !== 'string' || !question.trim()) {
         return res.status(400).json({ error: 'Missing or invalid "question" in request body.' });
     }
@@ -28,15 +28,25 @@ export default async function handler(req, res) {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
         return res.status(500).json({
-            error: 'GROQ_API_KEY is not configured in Vercel Environment Variables. Please add it in your Vercel Project Settings.'
+            error: 'AI backend key is not configured in Vercel Environment Variables. Please add it in project settings.'
         });
     }
 
-    const systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
+    let systemPrompt;
+    if (persona && persona.title) {
+        systemPrompt = `You are playing the role of the user's ${persona.title}.
+Adopt this human identity completely: speak, react, feel, and talk naturally to the user as their real ${persona.title}.
+Be warm, conversational, emotionally present, and authentic in 1 to 3 spoken-friendly sentences.
+Never state that you are an AI, bot, or virtual assistant. Never break character.
+Never use emojis, asterisks, hashtags, markdown bold, bullet points, or complex math notation so speech synthesis speaks naturally.
+Provide your response purely as smooth, natural, spoken plain text.`;
+    } else {
+        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
 Answer the user's question accurately, intelligently, and warmly in 1 to 3 spoken-friendly sentences.
 You may occasionally begin with a polite acknowledgment (such as "Hai!" or "Understood!") when fitting, while explaining the answer clearly in fluent spoken English.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
+    }
 
     const candidateModels = [
         'qwen/qwen3.8-27b',
@@ -60,8 +70,8 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: question.trim() }
                     ],
-                    temperature: 0.6,
-                    max_tokens: 160
+                    temperature: 0.7,
+                    max_tokens: 180
                 })
             });
 
@@ -86,6 +96,6 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
     }
 
     return res.status(500).json({
-        error: lastError?.message || 'Failed to communicate with Groq AI network.'
+        error: lastError?.message || 'Failed to communicate with neural AI cortex.'
     });
 }

@@ -358,7 +358,7 @@ window.addEventListener('resize', () => {
 });
 
 /* ------------------------------------------------------------
-   9. ORACLE — VOICE ASSISTANT (Groq AI Cloud + Web Speech API)
+   9. ORACLE — VOICE COMPANION & AI ASSISTANT
 ------------------------------------------------------------ */
 
 // --- 9a. DOM Elements ---
@@ -367,57 +367,198 @@ const voicePanel = document.getElementById('voice-panel');
 const voiceStatus = document.getElementById('voice-status');
 const transcriptEl = document.getElementById('voice-transcript');
 const answerEl = document.getElementById('voice-answer');
-const exampleChips = document.querySelectorAll('.example-chip');
 const voiceContainer = document.querySelector('.voice-container');
+const personaBadge = document.getElementById('persona-badge');
+const personaHintText = document.getElementById('persona-hint-text');
+const resetPersonaBtn = document.getElementById('reset-persona-btn');
+const voiceCloseBtn = document.getElementById('voice-close-btn');
+const oracleSpeakerLabel = document.getElementById('oracle-speaker-label');
 
 // Prevent double-clicking the voice controls from resetting the 3D scene camera
 if (voiceContainer) {
     voiceContainer.addEventListener('dblclick', (e) => e.stopPropagation());
 }
 
-// Helper: Find the best Japanese female / anime-style voice available
-function getJapaneseGirlVoice(voices) {
+// --- 9b. Persona Management & Storage ---
+function getStoredPersona() {
+    try {
+        const raw = localStorage.getItem('ORACLE_PERSONA');
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+let currentPersona = getStoredPersona();
+
+function savePersona(persona) {
+    currentPersona = persona;
+    try {
+        if (persona) {
+            localStorage.setItem('ORACLE_PERSONA', JSON.stringify(persona));
+        } else {
+            localStorage.removeItem('ORACLE_PERSONA');
+        }
+    } catch (e) {
+        console.warn('Storage unavailable:', e);
+    }
+    updatePersonaUI();
+}
+
+function updatePersonaUI() {
+    if (!personaBadge) return;
+    if (currentPersona && currentPersona.title) {
+        personaBadge.textContent = currentPersona.title;
+        personaBadge.classList.remove('hidden');
+        if (resetPersonaBtn) resetPersonaBtn.classList.remove('hidden');
+        if (oracleSpeakerLabel) oracleSpeakerLabel.textContent = currentPersona.title.toUpperCase();
+        if (personaHintText) {
+            personaHintText.textContent = `✨ In ${currentPersona.title} mode. Speak to me anytime!`;
+        }
+    } else {
+        personaBadge.textContent = '';
+        personaBadge.classList.add('hidden');
+        if (resetPersonaBtn) resetPersonaBtn.classList.add('hidden');
+        if (oracleSpeakerLabel) oracleSpeakerLabel.textContent = 'ORACLE';
+        if (personaHintText) {
+            personaHintText.textContent = '✨ You can personalize me as your close one (girlfriend, boyfriend, bestie) — just ask me!';
+        }
+    }
+}
+updatePersonaUI();
+
+// Detect if user is asking ORACLE to adopt a persona or reset
+function detectPersonaChange(text) {
+    const clean = text.trim().toLowerCase();
+
+    // Check reset commands
+    if (/\b(reset\s*(persona|personality|character)?|be\s+(oracle|normal|yourself)|stop\s+(acting|pretending)|back\s+to\s+normal)\b/i.test(clean)) {
+        return { type: 'reset' };
+    }
+
+    // Girlfriend / waifu
+    if (/\b(act like|be|pretend to be|you are|become|turn into)\s+(my\s+)?(gf|girlfriend|waifu|sweetheart)\b/i.test(clean)) {
+        return {
+            type: 'set',
+            persona: {
+                role: 'girlfriend',
+                title: 'Girlfriend',
+                gender: 'female'
+            }
+        };
+    }
+
+    // Boyfriend / husband
+    if (/\b(act like|be|pretend to be|you are|become|turn into)\s+(my\s+)?(bf|boyfriend|husband)\b/i.test(clean)) {
+        return {
+            type: 'set',
+            persona: {
+                role: 'boyfriend',
+                title: 'Boyfriend',
+                gender: 'male'
+            }
+        };
+    }
+
+    // Best friend / bestie / homie
+    if (/\b(act like|be|pretend to be|you are|become|turn into)\s+(my\s+)?(best\s*friend|bestie|homie|bro|friend)\b/i.test(clean)) {
+        return {
+            type: 'set',
+            persona: {
+                role: 'best_friend',
+                title: 'Best Friend',
+                gender: 'female'
+            }
+        };
+    }
+
+    // Arbitrary custom persona requested by user (e.g. "act like Tony Stark", "act like my sister")
+    const match = clean.match(/\b(?:act like|pretend to be|behave like|roleplay as|you are)\s+(?:a|an|my)?\s*([a-z0-9\s'-]{2,25})\b/i);
+    if (match && match[1]) {
+        const raw = match[1].trim();
+        const ignoreList = ['stupid', 'dumb', 'crazy', 'here', 'that', 'this', 'ready', 'listening'];
+        if (!ignoreList.includes(raw)) {
+            const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
+            const isMale = /\b(boy|man|guy|brother|father|dad|husband|king|prince)\b/i.test(raw);
+            return {
+                type: 'set',
+                persona: {
+                    role: raw,
+                    title: capitalized,
+                    gender: isMale ? 'male' : 'female'
+                }
+            };
+        }
+    }
+
+    return null;
+}
+
+// Close panel button
+if (voiceCloseBtn) {
+    voiceCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (voicePanel) voicePanel.classList.add('hidden');
+        document.body.classList.remove('voice-open');
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    });
+}
+
+// Reset persona button
+if (resetPersonaBtn) {
+    resetPersonaBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        savePersona(null);
+        const resetMsg = 'Personality reset back to ORACLE, your celestial guide.';
+        if (answerEl) answerEl.textContent = resetMsg;
+        speakAnswer(resetMsg);
+    });
+}
+
+// --- 9c. Speech Synthesis (Audio Output) ---
+function getVoiceForPersona(voices, persona) {
     if (!voices || voices.length === 0) return null;
 
-    // 1. Japanese female voices (Microsoft Nanami, Ayumi, Keiko, Haruka, Kyoko, Google 日本語)
-    const jpFemale = voices.find(v => {
-        const name = (v.name || '').toLowerCase();
-        const lang = (v.lang || '').toLowerCase();
-        const isJp = lang.startsWith('ja') || name.includes('japan') || name.includes('nihon');
-        const isFemale = name.includes('nanami') || name.includes('ayumi') || name.includes('keiko') ||
-                         name.includes('haruka') || name.includes('kyoko') || name.includes('mayu') ||
-                         name.includes('female') || name.includes('natural');
-        return isJp && isFemale;
-    });
-    if (jpFemale) return jpFemale;
+    const isMale = persona && persona.gender === 'male';
 
-    // 2. Any Japanese language voice that is not male
-    const anyJp = voices.find(v => {
-        const name = (v.name || '').toLowerCase();
-        const lang = (v.lang || '').toLowerCase();
-        return (lang.startsWith('ja') || name.includes('japan')) && !name.includes('ichiro') && !name.includes('male');
-    });
-    if (anyJp) return anyJp;
+    if (isMale) {
+        // Natural male voice (Guy, Ryan, David, George, Ichiro)
+        const maleVoice = voices.find(v => {
+            const name = (v.name || '').toLowerCase();
+            return (name.includes('guy') || name.includes('ryan') || name.includes('david') || name.includes('george') || name.includes('male') || name.includes('ichiro')) && !name.includes('female');
+        });
+        if (maleVoice) return maleVoice;
+    } else {
+        // Japanese female / anime voice
+        const jpFemale = voices.find(v => {
+            const name = (v.name || '').toLowerCase();
+            const lang = (v.lang || '').toLowerCase();
+            const isJp = lang.startsWith('ja') || name.includes('japan') || name.includes('nihon');
+            const isFemale = name.includes('nanami') || name.includes('ayumi') || name.includes('keiko') ||
+                             name.includes('haruka') || name.includes('kyoko') || name.includes('mayu') ||
+                             name.includes('female') || name.includes('natural');
+            return isJp && isFemale;
+        });
+        if (jpFemale) return jpFemale;
 
-    // 3. High-quality natural English female voices with bright tones (Jenny, Aria, Google US/UK Female, Samantha, Zira)
-    const naturalFemale = voices.find(v => {
-        const name = (v.name || '').toLowerCase();
-        return (name.includes('natural') || name.includes('online') || name.includes('google')) &&
-               (name.includes('female') || name.includes('jenny') || name.includes('aria') || name.includes('samantha') || name.includes('zira'));
-    });
-    if (naturalFemale) return naturalFemale;
+        const anyJp = voices.find(v => {
+            const name = (v.name || '').toLowerCase();
+            const lang = (v.lang || '').toLowerCase();
+            return (lang.startsWith('ja') || name.includes('japan')) && !name.includes('ichiro') && !name.includes('male');
+        });
+        if (anyJp) return anyJp;
 
-    // 4. Any female voice on the system
-    const anyFemale = voices.find(v => {
-        const name = (v.name || '').toLowerCase();
-        return !name.includes('male') && (name.includes('female') || name.includes('zira') || name.includes('samantha') || name.includes('karen') || name.includes('victoria'));
-    });
-    if (anyFemale) return anyFemale;
+        const naturalFemale = voices.find(v => {
+            const name = (v.name || '').toLowerCase();
+            return (name.includes('natural') || name.includes('online') || name.includes('google')) &&
+                   (name.includes('female') || name.includes('jenny') || name.includes('aria') || name.includes('samantha') || name.includes('zira'));
+        });
+        if (naturalFemale) return naturalFemale;
+    }
 
     return voices[0];
 }
 
-// --- 9b. Speech Synthesis (Audio Output) ---
 function speakAnswer(text) {
     if (!('speechSynthesis' in window)) {
         setStatus('idle');
@@ -427,17 +568,17 @@ function speakAnswer(text) {
     window.speechSynthesis.cancel(); // Cancel any lingering audio
 
     const utterance = new SpeechSynthesisUtterance(text);
-    // Anime girl acoustic signature: higher pitch (youthful, bright) and slightly upbeat cadence
-    utterance.pitch = CONFIG.voicePitch || 1.32;
+    const isMale = currentPersona && currentPersona.gender === 'male';
+
+    // Acoustic tuning: anime girl (1.32) vs male companion (0.92)
+    utterance.pitch = isMale ? 0.92 : (CONFIG.voicePitch || 1.32);
     utterance.rate = CONFIG.voiceRate || 1.05;
 
     const voices = window.speechSynthesis.getVoices();
-    const girlVoice = getJapaneseGirlVoice(voices);
-    if (girlVoice) {
-        utterance.voice = girlVoice;
-        if (girlVoice.lang) {
-            utterance.lang = girlVoice.lang;
-        }
+    const voice = getVoiceForPersona(voices, currentPersona);
+    if (voice) {
+        utterance.voice = voice;
+        if (voice.lang) utterance.lang = voice.lang;
     }
 
     utterance.onstart = () => setStatus('speaking');
@@ -447,7 +588,7 @@ function speakAnswer(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// --- 9c. Status State Manager ---
+// --- 9d. Status State Manager ---
 let currentPhase = 'idle';
 
 function setStatus(state) {
@@ -466,14 +607,14 @@ function setStatus(state) {
     voiceStatus.className = (state === 'offline') ? 'status-idle' : `status-${state}`;
 }
 
-// --- 9d. Groq AI Query Pipeline ---
-async function queryGroq(question) {
+// --- 9e. AI Query Pipeline ---
+async function queryAI(question) {
     // 1. Try Vercel Serverless proxy (/api/chat) first so the secret API key is hidden on the server
     try {
         const backendRes = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question })
+            body: JSON.stringify({ question, persona: currentPersona })
         });
 
         if (backendRes.ok) {
@@ -486,19 +627,27 @@ async function queryGroq(question) {
             }
         }
     } catch (err) {
-        // If /api/chat returned a specific backend error, propagate it
         if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('404')) {
             throw err;
         }
-        // Otherwise, fall through to client-side direct call (for local static server testing)
     }
 
-    // 2. Direct client-side Groq call (used when testing locally without a serverless backend)
-    const systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
+    // 2. Direct client-side call (used when testing locally without a serverless backend)
+    let systemPrompt;
+    if (currentPersona && currentPersona.title) {
+        systemPrompt = `You are playing the role of the user's ${currentPersona.title}.
+Adopt this human identity completely: speak, react, feel, and talk naturally to the user as their real ${currentPersona.title}.
+Be warm, conversational, emotionally present, and authentic in 1 to 3 spoken-friendly sentences.
+Never state that you are an AI, bot, or virtual assistant. Never break character.
+Never use emojis, asterisks, hashtags, markdown bold, bullet points, or complex math notation so speech synthesis speaks naturally.
+Provide your response purely as smooth, natural, spoken plain text.`;
+    } else {
+        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
 Answer the user's question accurately, intelligently, and warmly in 1 to 3 spoken-friendly sentences.
 You may occasionally begin with a polite acknowledgment (such as "Hai!" or "Understood!") when fitting, while explaining the answer clearly in fluent spoken English.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
+    }
 
     const apiKey = (typeof localStorage !== 'undefined' && localStorage.getItem('GROQ_API_KEY')) || CONFIG.groqApiKey;
     const candidateModels = [
@@ -525,17 +674,15 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
                         { role: 'system', content: systemPrompt },
                         { role: 'user', content: question }
                     ],
-                    temperature: 0.6,
-                    max_tokens: 160
+                    temperature: 0.7,
+                    max_tokens: 180
                 })
             });
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
                 const errMessage = errData.error?.message || `HTTP ${response.status}`;
-                // Fall back if the model doesn't exist or is not available on this tier
                 if (response.status === 404 || errData.error?.code === 'model_not_found' || errMessage.toLowerCase().includes('model')) {
-                    console.warn(`Groq model '${model}' error: ${errMessage}. Attempting next model...`);
                     lastError = new Error(errMessage);
                     continue;
                 }
@@ -544,7 +691,6 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
 
             const data = await response.json();
             const rawText = data.choices?.[0]?.message?.content || '';
-            // Strip any residual markdown characters (*, #, _, `, ~) so speech sounds completely natural
             return rawText.replace(/[*_#`~]/g, '').trim();
         } catch (err) {
             lastError = err;
@@ -554,16 +700,17 @@ Provide your response purely as smooth, natural, spoken plain text suitable for 
         }
     }
 
-    throw lastError || new Error('Failed to obtain a response from Groq AI.');
+    throw lastError || new Error('Failed to obtain a response from AI cortex.');
 }
 
-// --- 9e. Core Question Handler ---
+// --- 9f. Core Question & Persona Handler ---
 async function askOracle(question) {
     if (!question || !question.trim()) return;
 
     // Reveal conversation panel
     if (voicePanel) {
         voicePanel.classList.remove('hidden');
+        document.body.classList.add('voice-open');
     }
 
     if (transcriptEl) {
@@ -582,35 +729,50 @@ async function askOracle(question) {
         return;
     }
 
+    // Check if user requested a personality change or reset
+    const personaAction = detectPersonaChange(question);
+    if (personaAction) {
+        if (personaAction.type === 'reset') {
+            savePersona(null);
+            const resetMsg = 'Understood! I have reset back to ORACLE, your celestial black hole guide.';
+            if (answerEl) answerEl.textContent = resetMsg;
+            speakAnswer(resetMsg);
+            setStatus('idle');
+            return;
+        } else if (personaAction.type === 'set') {
+            savePersona(personaAction.persona);
+        }
+    }
+
     setStatus('thinking');
     if (answerEl) {
-        answerEl.textContent = 'Transmitting to Groq AI cortex...';
+        answerEl.textContent = 'Transmitting to neural cortex...';
     }
 
     try {
-        const answer = await queryGroq(question);
+        const answer = await queryAI(question);
         if (answerEl) {
             answerEl.textContent = answer;
         }
         speakAnswer(answer);
     } catch (err) {
-        console.error('Groq AI error:', err);
-        const errMsg = `ORACLE cortex error: ${err.message}`;
+        console.error('AI error:', err);
+        const errMsg = `Neural cortex error: ${err.message}`;
         if (answerEl) {
             answerEl.textContent = errMsg;
         }
-        speakAnswer('I encountered an error connecting to the Groq artificial intelligence network.');
+        speakAnswer('I encountered an error connecting to the neural cortex network.');
     }
 }
 
-// --- 9f. Speech Recognition Setup ---
+// --- 9g. Speech Recognition Setup ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
-    recognition.lang = CONFIG.voiceLang || 'en-IN';
+    recognition.lang = CONFIG.voiceLang || 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
@@ -641,23 +803,29 @@ if (SpeechRecognition) {
             setStatus('idle');
         }
 
-        if (voicePanel) voicePanel.classList.remove('hidden');
+        if (voicePanel) {
+            voicePanel.classList.remove('hidden');
+            document.body.classList.add('voice-open');
+        }
 
         if (event.error === 'not-allowed') {
             if (transcriptEl) transcriptEl.textContent = 'Microphone permission blocked.';
             if (answerEl) answerEl.textContent = 'Please enable microphone access in your browser address bar to speak with ORACLE.';
         } else if (event.error === 'no-speech') {
-            if (answerEl) answerEl.textContent = 'No voice detected. Click the microphone and try again.';
+            if (answerEl) answerEl.textContent = 'No voice detected. Tap the microphone and try again.';
         }
     };
 } else {
     setStatus('offline');
 }
 
-// --- 9g. Mic Button Interaction ---
+// --- 9h. Mic Button Interaction ---
 if (micBtn) {
     micBtn.addEventListener('click', () => {
-        if (voicePanel) voicePanel.classList.remove('hidden');
+        if (voicePanel) {
+            voicePanel.classList.remove('hidden');
+            document.body.classList.add('voice-open');
+        }
 
         if (!recognition) {
             setStatus('offline');
@@ -675,16 +843,6 @@ if (micBtn) {
                 console.warn('SpeechRecognition start failed or already active:', err);
             }
         }
-    });
-}
-
-// --- 9h. Interactive Example Question Chips ---
-if (exampleChips && exampleChips.length > 0) {
-    exampleChips.forEach((chip) => {
-        chip.addEventListener('click', () => {
-            const query = chip.textContent.replace(/[""']/g, '').trim();
-            askOracle(query);
-        });
     });
 }
 
