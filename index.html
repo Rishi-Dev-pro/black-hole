@@ -58,20 +58,8 @@
         <!-- Conversation Panel (appears when mic is used) -->
         <div id="voice-panel" class="hidden">
             <div class="voice-header">
-                <div class="voice-header-left">
-                    <span class="voice-title">🔮 ORACLE</span>
-                    <button id="api-key-btn" title="Configure Groq API Key" class="voice-icon-btn">⚙️</button>
-                </div>
+                <span class="voice-title">🔮 ORACLE</span>
                 <span id="voice-status" class="status-idle">OFFLINE</span>
-            </div>
-
-            <!-- Groq API Key Drawer -->
-            <div id="api-key-drawer" class="api-key-drawer hidden">
-                <div class="key-input-row">
-                    <input type="password" id="groq-key-input" placeholder="Paste Groq Key (gsk_...)" autocomplete="off" spellcheck="false" />
-                    <button id="save-key-btn">Save</button>
-                </div>
-                <p class="key-hint">Enables infinite live AI via Groq Cloud. Saved locally in your browser.</p>
             </div>
 
             <div class="voice-body">

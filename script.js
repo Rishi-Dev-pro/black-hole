@@ -19,8 +19,8 @@ const CONFIG = {
     flySpeed: 0.18,              // WASD speed
     cameraStart: new THREE.Vector3(0, 4.5, 14),
     voiceLang: 'en-IN',          // voice recognition & synthesis language
-    groqApiKey: '',              // optional hardcoded Groq API key (or entered via UI)
-    groqModel: 'llama-3.3-70b-versatile', // ultra-fast, highly intelligent Groq model
+    groqApiKey: '',              // Kept secure on server (Vercel GROQ_API_KEY) or set via localStorage
+    groqModel: 'qwen/qwen3.8-27b', // ultra-fast, high-intelligence Groq model
 };
 
 /* ------------------------------------------------------------
@@ -356,7 +356,7 @@ window.addEventListener('resize', () => {
 });
 
 /* ------------------------------------------------------------
-   9. ORACLE — VOICE ASSISTANT (Web Speech API + Knowledge Base)
+   9. ORACLE — VOICE ASSISTANT (Groq AI Cloud + Web Speech API)
 ------------------------------------------------------------ */
 
 // --- 9a. DOM Elements ---
@@ -367,270 +367,13 @@ const transcriptEl = document.getElementById('voice-transcript');
 const answerEl = document.getElementById('voice-answer');
 const exampleChips = document.querySelectorAll('.example-chip');
 const voiceContainer = document.querySelector('.voice-container');
-const apiKeyBtn = document.getElementById('api-key-btn');
-const apiKeyDrawer = document.getElementById('api-key-drawer');
-const groqKeyInput = document.getElementById('groq-key-input');
-const saveKeyBtn = document.getElementById('save-key-btn');
 
 // Prevent double-clicking the voice controls from resetting the 3D scene camera
 if (voiceContainer) {
     voiceContainer.addEventListener('dblclick', (e) => e.stopPropagation());
 }
 
-// --- 9b. Local Curated Knowledge Base ---
-const KNOWLEDGE_BASE = [
-    // === MATH: Core Formulas & Theorems ===
-    {
-        keywords: ['pythagoras', 'pythagorean', 'pythagorean theorem'],
-        answer: "The Pythagoras theorem states that in a right-angled triangle: a² + b² = c², where c is the hypotenuse and a and b are the other two sides."
-    },
-    {
-        keywords: ['area of circle', 'circle area', 'area circle'],
-        answer: "The area of a circle is A = πr², where π is approximately 3.14159 and r is the radius of the circle."
-    },
-    {
-        keywords: ['circumference', 'perimeter of circle', 'circle circumference'],
-        answer: "The circumference of a circle is C = 2πr, or equivalently π times the diameter."
-    },
-    {
-        keywords: ['area of triangle', 'triangle area'],
-        answer: "The area of a triangle is A = ½ × base × height. For equilateral triangles, it is (√3 / 4) × side²."
-    },
-    {
-        keywords: ['quadratic formula', 'quadratic equation formula', 'roots of quadratic'],
-        answer: "The quadratic formula to solve ax² + bx + c = 0 is: x = (-b ± √(b² - 4ac)) / (2a)."
-    },
-    {
-        keywords: ['volume of sphere', 'sphere volume'],
-        answer: "The volume of a sphere is V = (4/3)πr³, where r is the radius."
-    },
-    {
-        keywords: ['volume of cylinder', 'cylinder volume'],
-        answer: "The volume of a cylinder is V = πr²h, where r is the base radius and h is the height."
-    },
-    {
-        keywords: ['volume of cone', 'cone volume'],
-        answer: "The volume of a cone is V = (1/3)πr²h, which is exactly one-third the volume of a cylinder with identical dimensions."
-    },
-    {
-        keywords: ['area of rectangle', 'rectangle area', 'perimeter of rectangle'],
-        answer: "For a rectangle, Area = length × width, and Perimeter = 2 × (length + width)."
-    },
-    {
-        keywords: ['area of square', 'square area', 'perimeter of square'],
-        answer: "For a square with side length s, Area = s², and Perimeter = 4 × s."
-    },
-    {
-        keywords: ['simple interest', 'si formula'],
-        answer: "Simple Interest formula is: SI = (P × R × T) / 100, where P is the Principal, R is the annual Rate of interest, and T is Time in years."
-    },
-    {
-        keywords: ['compound interest', 'ci formula'],
-        answer: "The compound interest amount formula is: A = P(1 + r/n)^(nt), where P is principal, r is rate, n is compounding frequency per year, and t is years."
-    },
-    {
-        keywords: ['speed', 'speed formula', 'velocity formula'],
-        answer: "Speed = Distance / Time. Therefore, Distance = Speed × Time, and Time = Distance / Speed."
-    },
-    {
-        keywords: ['pi value', 'value of pi', 'what is pi'],
-        answer: "Pi (π) is the ratio of a circle's circumference to its diameter. It is an irrational number approximately equal to 3.14159, or 22/7 as a fraction."
-    },
-    {
-        keywords: ['trigonometry', 'sin cos tan', 'sine cosine tangent'],
-        answer: "In a right-angled triangle: sin(θ) = Opposite / Hypotenuse, cos(θ) = Adjacent / Hypotenuse, and tan(θ) = Opposite / Adjacent."
-    },
-    {
-        keywords: ['heron', 'herons formula'],
-        answer: "Heron's formula calculates triangle area from sides a, b, c: Area = √(s(s - a)(s - b)(s - c)), where s = (a + b + c) / 2 is the semi-perimeter."
-    },
-    {
-        keywords: ['distance formula'],
-        answer: "The 2D distance between (x₁, y₁) and (x₂, y₂) is d = √((x₂ - x₁)² + (y₂ - y₁)²)."
-    },
-    {
-        keywords: ['slope', 'slope formula'],
-        answer: "The slope (m) of a line through (x₁, y₁) and (x₂, y₂) is m = (y₂ - y₁) / (x₂ - x₁)."
-    },
-    {
-        keywords: ['average formula', 'mean formula'],
-        answer: "The arithmetic mean or average is the sum of all observations divided by the total number of observations."
-    },
-
-    // === INDIA POLITICS & CIVICS ===
-    {
-        keywords: ['prime minister of india', 'india prime minister', 'pm of india', 'indian prime minister', 'prime minister'],
-        answer: "The Prime Minister of India is Narendra Modi, who has served as the head of government since May 2014, leading the National Democratic Alliance."
-    },
-    {
-        keywords: ['president of india', 'india president', 'indian president', 'president'],
-        answer: "The President of India is Droupadi Murmu, the ceremonial head of state and Supreme Commander of the Indian Armed Forces, in office since July 2022."
-    },
-    {
-        keywords: ['first prime minister of india', 'first pm of india'],
-        answer: "The first Prime Minister of independent India was Pandit Jawaharlal Nehru, who served from August 15, 1947 until May 1964."
-    },
-    {
-        keywords: ['first president of india'],
-        answer: "The first President of India was Dr. Rajendra Prasad, serving from 1950 to 1962."
-    },
-    {
-        keywords: ['father of indian constitution', 'father of constitution', 'br ambedkar', 'ambedkar'],
-        answer: "Dr. Bhimrao Ramji Ambedkar is recognized as the chief architect and Father of the Constitution of India, chairing its Drafting Committee."
-    },
-    {
-        keywords: ['independence day india', 'independence year', 'when did india get independence'],
-        answer: "India gained independence from British rule on August 15, 1947."
-    },
-    {
-        keywords: ['republic day', 'constitution of india', 'when constitution adopted'],
-        answer: "The Constitution of India was adopted by the Constituent Assembly on November 26, 1949 and came into full legal effect on January 26, 1950, celebrated as Republic Day."
-    },
-    {
-        keywords: ['how many states in india', 'states of india', 'number of states'],
-        answer: "India has 28 states and 8 Union Territories, functioning under a federal parliamentary constitutional republic."
-    },
-    {
-        keywords: ['lok sabha', 'lower house', 'lok sabha seats'],
-        answer: "The Lok Sabha (House of the People) is the lower house of the Indian Parliament, with 543 directly elected parliamentary constituencies."
-    },
-    {
-        keywords: ['rajya sabha', 'upper house', 'rajya sabha seats'],
-        answer: "The Rajya Sabha (Council of States) is the upper house of Parliament, comprising up to 250 members, representing states and union territories."
-    },
-    {
-        keywords: ['voting age in india', 'voting age'],
-        answer: "The legal voting age in India is 18 years, established by the 61st Constitutional Amendment Act of 1988."
-    },
-    {
-        keywords: ['article 370', 'jammu and kashmir'],
-        answer: "Article 370 of the Indian Constitution granted special autonomous status to Jammu and Kashmir; its key provisions were abrogated by the Indian Parliament in August 2019."
-    },
-    {
-        keywords: ['preamble of india', 'preamble'],
-        answer: "The Preamble to the Indian Constitution declares India to be a Sovereign, Socialist, Secular, Democratic Republic, securing justice, liberty, equality, and fraternity for all citizens."
-    },
-    {
-        keywords: ['capital of india'],
-        answer: "The capital of India is New Delhi."
-    },
-
-    // === WORLD POLITICS & MAJOR COUNTRIES ===
-    {
-        keywords: ['president of usa', 'us president', 'usa president', 'president of united states', 'american president'],
-        answer: "The President of the United States serves as the head of state and head of government. Donald Trump was elected as the 47th President following the 2024 elections."
-    },
-    {
-        keywords: ['prime minister of uk', 'uk prime minister', 'british prime minister', 'pm of uk', 'britain prime minister'],
-        answer: "The Prime Minister of the United Kingdom is Keir Starmer, leader of the Labour Party, who assumed office in July 2024."
-    },
-    {
-        keywords: ['president of russia', 'russia president', 'russian president', 'putin'],
-        answer: "The President of the Russian Federation is Vladimir Putin, who has served as head of state continuously since 2012, and previously from 2000 to 2008."
-    },
-    {
-        keywords: ['president of china', 'china president', 'chinese president', 'xi jinping'],
-        answer: "The President of the People's Republic of China and General Secretary of the Chinese Communist Party is Xi Jinping, serving since 2013."
-    },
-    {
-        keywords: ['president of france', 'france president', 'french president', 'macron'],
-        answer: "The President of France is Emmanuel Macron, serving as head of state of the French Republic since May 2017."
-    },
-    {
-        keywords: ['chancellor of germany', 'germany chancellor', 'german chancellor'],
-        answer: "The Chancellor of Germany is the head of the federal government, directing policy from the Federal Chancellery in Berlin."
-    },
-    {
-        keywords: ['prime minister of japan', 'japan prime minister', 'japanese prime minister'],
-        answer: "The Prime Minister of Japan is the head of government and leader of the Cabinet, working within Japan's constitutional monarchy."
-    },
-    {
-        keywords: ['un secretary general', 'united nations head', 'secretary general of un'],
-        answer: "The Secretary-General of the United Nations is António Guterres of Portugal, serving as the UN's chief administrative officer since January 2017."
-    },
-    {
-        keywords: ['un headquarters', 'united nations headquarters'],
-        answer: "The official headquarters of the United Nations is situated in New York City, USA, on international territory."
-    },
-    {
-        keywords: ['nato headquarters', 'headquarters of nato'],
-        answer: "The political and military headquarters of the North Atlantic Treaty Organization (NATO) is located in Brussels, Belgium."
-    },
-
-    // === ASTRONOMY & BLACK HOLES (THEME-SPECIFIC) ===
-    {
-        keywords: ['black hole', 'what is a black hole'],
-        answer: "A black hole is a region of spacetime where gravity is so intense that nothing, not even light, can escape once past the event horizon."
-    },
-    {
-        keywords: ['event horizon', 'what is event horizon'],
-        answer: "The event horizon is the theoretical threshold around a black hole beyond which the escape velocity exceeds the speed of light."
-    },
-    {
-        keywords: ['schwarzschild radius', 'radius formula'],
-        answer: "The Schwarzschild radius defines the size of an event horizon: r_s = 2GM / c², where G is the gravitational constant, M is mass, and c is the speed of light."
-    },
-    {
-        keywords: ['gargantua'],
-        answer: "Gargantua is the supermassive black hole featured in Christopher Nolan's film Interstellar, scientifically modeled with physicist Kip Thorne."
-    },
-
-    // === GREETINGS & INTENTS ===
-    {
-        keywords: ['hello', 'hi', 'hey', 'greetings'],
-        answer: "Greetings, traveler of the cosmos. I am ORACLE. Ask me about mathematics, formulas, Indian civics, or world politics."
-    },
-    {
-        keywords: ['who are you', 'your name', 'what are you'],
-        answer: "I am ORACLE, your artificial guide anchored to the Gargantua black hole simulation. I can answer questions on mathematics, physics, and world politics."
-    },
-    {
-        keywords: ['what can you do', 'help', 'capabilities'],
-        answer: "I can answer questions on mathematical formulas (like Pythagoras theorem, circle areas, quadratic equations) and political facts about India and major nations."
-    },
-    {
-        keywords: ['thank you', 'thanks'],
-        answer: "You are welcome. May the laws of gravity keep you grounded."
-    }
-];
-
-const FALLBACK_ANSWER = "That lies beyond my event horizon. I specialize in mathematical formulas and the politics of India and major world powers. Try asking about Pythagoras theorem, circle area, or the Prime Minister of India.";
-
-// --- 9c. Text Matching & Scoring Algorithm ---
-function normalizeText(text) {
-    return ' ' + text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
-}
-
-function findAnswer(rawQuestion) {
-    const q = normalizeText(rawQuestion);
-    let bestMatch = null;
-    let bestScore = 0;
-
-    for (const entry of KNOWLEDGE_BASE) {
-        let entryScore = 0;
-        for (const kw of entry.keywords) {
-            const normalizedKw = normalizeText(kw);
-            const kwWords = kw.trim().toLowerCase().split(/\s+/);
-
-            // Exact phrase match receives higher weighting
-            if (q.includes(normalizedKw)) {
-                entryScore += kwWords.length * 3;
-            } else if (kwWords.every(w => q.includes(' ' + w + ' '))) {
-                // All individual words present receives partial weighting
-                entryScore += kwWords.length;
-            }
-        }
-
-        if (entryScore > bestScore) {
-            bestScore = entryScore;
-            bestMatch = entry;
-        }
-    }
-
-    return bestScore > 0 ? bestMatch.answer : FALLBACK_ANSWER;
-}
-
-// --- 9d. Speech Synthesis (Audio Output) ---
+// --- 9b. Speech Synthesis (Audio Output) ---
 function speakAnswer(text) {
     if (!('speechSynthesis' in window)) {
         setStatus('idle');
@@ -657,7 +400,7 @@ function speakAnswer(text) {
     window.speechSynthesis.speak(utterance);
 }
 
-// --- 9e. Status State Manager ---
+// --- 9c. Status State Manager ---
 let currentPhase = 'idle';
 
 function setStatus(state) {
@@ -676,46 +419,97 @@ function setStatus(state) {
     voiceStatus.className = (state === 'offline') ? 'status-idle' : `status-${state}`;
 }
 
-// --- 9f. Groq API Integration & Key Management ---
-function getGroqKey() {
-    return (localStorage.getItem('GROQ_API_KEY') || CONFIG.groqApiKey || '').trim();
-}
+// --- 9d. Groq AI Query Pipeline ---
+async function queryGroq(question) {
+    // 1. Try Vercel Serverless proxy (/api/chat) first so the secret API key is hidden on the server
+    try {
+        const backendRes = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
+        });
 
-async function queryGroq(question, apiKey) {
-    const systemPrompt = `You are ORACLE, an omniscient, articulate AI guide anchored to the Gargantua supermassive black hole.
+        if (backendRes.ok) {
+            const data = await backendRes.json();
+            if (data.answer) return data.answer;
+        } else if (backendRes.status !== 404 && backendRes.status !== 405) {
+            const errData = await backendRes.json().catch(() => ({}));
+            if (errData.error) {
+                throw new Error(errData.error);
+            }
+        }
+    } catch (err) {
+        // If /api/chat returned a specific backend error, propagate it
+        if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('404')) {
+            throw err;
+        }
+        // Otherwise, fall through to client-side direct call (for local static server testing)
+    }
+
+    // 2. Direct client-side Groq call (used when testing locally without a serverless backend)
+    const systemPrompt = `You are ORACLE, an omniscient, articulate AI guide anchored to the Gargantua supermassive black hole simulation.
 Answer the user's question accurately, intelligently, and concisely in 1 to 3 spoken-friendly sentences.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey.trim()}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model: CONFIG.groqModel || 'llama-3.3-70b-versatile',
-            messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: question }
-            ],
-            temperature: 0.6,
-            max_tokens: 160
-        })
-    });
+    const apiKey = (typeof localStorage !== 'undefined' && localStorage.getItem('GROQ_API_KEY')) || CONFIG.groqApiKey;
+    const candidateModels = [
+        CONFIG.groqModel,
+        'qwen/qwen3.8-27b',
+        'openai/gpt-oss-120b',
+        'openai/gpt-oss-20b'
+    ].filter(Boolean);
+    const modelsToTry = [...new Set(candidateModels)];
 
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || `HTTP error ${response.status}`);
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+        try {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: question }
+                    ],
+                    temperature: 0.6,
+                    max_tokens: 160
+                })
+            });
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                const errMessage = errData.error?.message || `HTTP ${response.status}`;
+                // Fall back if the model doesn't exist or is not available on this tier
+                if (response.status === 404 || errData.error?.code === 'model_not_found' || errMessage.toLowerCase().includes('model')) {
+                    console.warn(`Groq model '${model}' error: ${errMessage}. Attempting next model...`);
+                    lastError = new Error(errMessage);
+                    continue;
+                }
+                throw new Error(errMessage);
+            }
+
+            const data = await response.json();
+            const rawText = data.choices?.[0]?.message?.content || '';
+            // Strip any residual markdown characters (*, #, _, `, ~) so speech sounds completely natural
+            return rawText.replace(/[*_#`~]/g, '').trim();
+        } catch (err) {
+            lastError = err;
+            if (model === modelsToTry[modelsToTry.length - 1]) {
+                throw lastError;
+            }
+        }
     }
 
-    const data = await response.json();
-    const rawText = data.choices?.[0]?.message?.content || '';
-    // Strip any markdown asterisks/hashes to keep speech natural
-    return rawText.replace(/[*_#`~]/g, '').trim();
+    throw lastError || new Error('Failed to obtain a response from Groq AI.');
 }
 
-// --- 9g. Core Question Handler ---
+// --- 9e. Core Question Handler ---
 async function askOracle(question) {
     if (!question || !question.trim()) return;
 
@@ -741,56 +535,27 @@ async function askOracle(question) {
     }
 
     setStatus('thinking');
-    const apiKey = getGroqKey();
+    if (answerEl) {
+        answerEl.textContent = 'Transmitting to Groq AI cortex...';
+    }
 
-    if (apiKey) {
+    try {
+        const answer = await queryGroq(question);
         if (answerEl) {
-            answerEl.textContent = 'Contacting Groq neural cortex...';
+            answerEl.textContent = answer;
         }
-        try {
-            const answer = await queryGroq(question, apiKey);
-            if (answerEl) {
-                answerEl.textContent = answer;
-            }
-            speakAnswer(answer);
-        } catch (err) {
-            console.error('Groq API error:', err);
-            if (err.message.includes('401') || err.message.toLowerCase().includes('invalid api key')) {
-                if (answerEl) {
-                    answerEl.textContent = 'Invalid Groq API Key. Please click the ⚙️ button to update your key.';
-                }
-                if (apiKeyDrawer) apiKeyDrawer.classList.remove('hidden');
-                speakAnswer('Your Groq API key is invalid. Please check the settings drawer.');
-            } else {
-                // Fallback to local knowledge base if network/rate error
-                const localAns = findAnswer(question);
-                if (localAns !== FALLBACK_ANSWER) {
-                    if (answerEl) answerEl.textContent = localAns;
-                    speakAnswer(localAns);
-                } else {
-                    if (answerEl) answerEl.textContent = `Error connecting to Groq: ${err.message}`;
-                    speakAnswer('I encountered an error connecting to the neural cortex.');
-                }
-            }
+        speakAnswer(answer);
+    } catch (err) {
+        console.error('Groq AI error:', err);
+        const errMsg = `ORACLE cortex error: ${err.message}`;
+        if (answerEl) {
+            answerEl.textContent = errMsg;
         }
-    } else {
-        // No Groq API key set: check local knowledge base first
-        const localAns = findAnswer(question);
-        if (localAns !== FALLBACK_ANSWER) {
-            if (answerEl) answerEl.textContent = localAns;
-            speakAnswer(localAns);
-        } else {
-            // Prompt user to add Groq Key to unlock universal knowledge
-            if (apiKeyDrawer) apiKeyDrawer.classList.remove('hidden');
-            if (groqKeyInput) groqKeyInput.focus();
-            const promptMsg = 'To answer any question across the cosmos, please enter your Groq API Key (gsk_...) in the settings drawer above.';
-            if (answerEl) answerEl.textContent = promptMsg;
-            speakAnswer('Please enter your Groq API key in the drawer above to unlock universal intelligence.');
-        }
+        speakAnswer('I encountered an error connecting to the Groq artificial intelligence network.');
     }
 }
 
-// --- 9h. Speech Recognition Setup ---
+// --- 9f. Speech Recognition Setup ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
@@ -841,7 +606,7 @@ if (SpeechRecognition) {
     setStatus('offline');
 }
 
-// --- 9i. Mic Button Interaction ---
+// --- 9g. Mic Button Interaction ---
 if (micBtn) {
     micBtn.addEventListener('click', () => {
         if (voicePanel) voicePanel.classList.remove('hidden');
@@ -865,7 +630,7 @@ if (micBtn) {
     });
 }
 
-// --- 9j. Interactive Example Question Chips ---
+// --- 9h. Interactive Example Question Chips ---
 if (exampleChips && exampleChips.length > 0) {
     exampleChips.forEach((chip) => {
         chip.addEventListener('click', () => {
@@ -873,60 +638,6 @@ if (exampleChips && exampleChips.length > 0) {
             askOracle(query);
         });
     });
-}
-
-// --- 9k. API Key Drawer & Persistence ---
-if (apiKeyBtn) {
-    apiKeyBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (apiKeyDrawer) {
-            apiKeyDrawer.classList.toggle('hidden');
-            if (!apiKeyDrawer.classList.contains('hidden') && groqKeyInput) {
-                groqKeyInput.value = localStorage.getItem('GROQ_API_KEY') || CONFIG.groqApiKey || '';
-                groqKeyInput.focus();
-            }
-        }
-    });
-}
-
-function saveKey() {
-    if (!groqKeyInput) return;
-    const key = groqKeyInput.value.trim();
-    if (key) {
-        localStorage.setItem('GROQ_API_KEY', key);
-        if (saveKeyBtn) {
-            saveKeyBtn.textContent = 'Saved ✓';
-            saveKeyBtn.style.background = 'rgba(74, 222, 128, 0.3)';
-            saveKeyBtn.style.borderColor = 'rgba(74, 222, 128, 0.6)';
-            setTimeout(() => {
-                saveKeyBtn.textContent = 'Save';
-                saveKeyBtn.style.background = '';
-                saveKeyBtn.style.borderColor = '';
-                if (apiKeyDrawer) apiKeyDrawer.classList.add('hidden');
-            }, 1200);
-        }
-        if (answerEl) {
-            answerEl.textContent = 'Groq AI key activated. Ask me any question!';
-        }
-        speakAnswer('Groq artificial intelligence online. Ask me anything.');
-    }
-}
-
-if (saveKeyBtn) {
-    saveKeyBtn.addEventListener('click', saveKey);
-}
-
-if (groqKeyInput) {
-    groqKeyInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            saveKey();
-        }
-    });
-}
-
-// Update API key icon status if already set
-if (getGroqKey() && apiKeyBtn) {
-    apiKeyBtn.title = 'Groq API Key active (Click to change)';
 }
 
 // Pre-load voices for SpeechSynthesis if supported
