@@ -253,12 +253,98 @@ html, body {
     background: rgba(255, 140, 50, 0.04);
 }
 
+.voice-header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .voice-title {
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.2em;
     color: #ffc46b;
     text-shadow: 0 0 12px rgba(255, 150, 60, 0.4);
+}
+
+.voice-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 4px;
+    border-radius: 6px;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    opacity: 0.7;
+}
+
+.voice-icon-btn:hover {
+    opacity: 1;
+    transform: scale(1.15);
+}
+
+/* API Key Drawer */
+.api-key-drawer {
+    padding: 10px 14px;
+    background: rgba(18, 14, 24, 0.95);
+    border-bottom: 1px solid rgba(255, 160, 80, 0.16);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: all 0.3s ease;
+}
+
+.api-key-drawer.hidden {
+    display: none;
+}
+
+.key-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+#groq-key-input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 160, 80, 0.3);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #fff;
+    font-size: 11px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#groq-key-input:focus {
+    border-color: #ffb56b;
+    box-shadow: 0 0 10px rgba(255, 160, 80, 0.3);
+}
+
+#save-key-btn {
+    background: rgba(255, 140, 50, 0.25);
+    border: 1px solid rgba(255, 160, 80, 0.5);
+    color: #ffc46b;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+#save-key-btn:hover {
+    background: rgba(255, 140, 50, 0.45);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 140, 50, 0.4);
+}
+
+.key-hint {
+    font-size: 9.5px;
+    color: rgba(255, 200, 150, 0.55);
+    letter-spacing: 0.02em;
+    line-height: 1.35;
 }
 
 /* Status badge — JS swaps these classes */

@@ -19,6 +19,8 @@ const CONFIG = {
     flySpeed: 0.18,              // WASD speed
     cameraStart: new THREE.Vector3(0, 4.5, 14),
     voiceLang: 'en-IN',          // voice recognition & synthesis language
+    groqApiKey: '',              // optional hardcoded Groq API key (or entered via UI)
+    groqModel: 'llama-3.3-70b-versatile', // ultra-fast, highly intelligent Groq model
 };
 
 /* ------------------------------------------------------------
@@ -365,6 +367,10 @@ const transcriptEl = document.getElementById('voice-transcript');
 const answerEl = document.getElementById('voice-answer');
 const exampleChips = document.querySelectorAll('.example-chip');
 const voiceContainer = document.querySelector('.voice-container');
+const apiKeyBtn = document.getElementById('api-key-btn');
+const apiKeyDrawer = document.getElementById('api-key-drawer');
+const groqKeyInput = document.getElementById('groq-key-input');
+const saveKeyBtn = document.getElementById('save-key-btn');
 
 // Prevent double-clicking the voice controls from resetting the 3D scene camera
 if (voiceContainer) {
@@ -670,8 +676,47 @@ function setStatus(state) {
     voiceStatus.className = (state === 'offline') ? 'status-idle' : `status-${state}`;
 }
 
-// --- 9f. Core Question Handler ---
-function askOracle(question) {
+// --- 9f. Groq API Integration & Key Management ---
+function getGroqKey() {
+    return (localStorage.getItem('GROQ_API_KEY') || CONFIG.groqApiKey || '').trim();
+}
+
+async function queryGroq(question, apiKey) {
+    const systemPrompt = `You are ORACLE, an omniscient, articulate AI guide anchored to the Gargantua supermassive black hole.
+Answer the user's question accurately, intelligently, and concisely in 1 to 3 spoken-friendly sentences.
+Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
+Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${apiKey.trim()}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: CONFIG.groqModel || 'llama-3.3-70b-versatile',
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: question }
+            ],
+            temperature: 0.6,
+            max_tokens: 160
+        })
+    });
+
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `HTTP error ${response.status}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.choices?.[0]?.message?.content || '';
+    // Strip any markdown asterisks/hashes to keep speech natural
+    return rawText.replace(/[*_#`~]/g, '').trim();
+}
+
+// --- 9g. Core Question Handler ---
+async function askOracle(question) {
     if (!question || !question.trim()) return;
 
     // Reveal conversation panel
@@ -696,21 +741,56 @@ function askOracle(question) {
     }
 
     setStatus('thinking');
-    if (answerEl) {
-        answerEl.textContent = 'Consulting knowledge archives...';
-    }
+    const apiKey = getGroqKey();
 
-    // Brief realistic delay for "thinking" perception
-    setTimeout(() => {
-        const answer = findAnswer(question);
+    if (apiKey) {
         if (answerEl) {
-            answerEl.textContent = answer;
+            answerEl.textContent = 'Contacting Groq neural cortex...';
         }
-        speakAnswer(answer);
-    }, 550);
+        try {
+            const answer = await queryGroq(question, apiKey);
+            if (answerEl) {
+                answerEl.textContent = answer;
+            }
+            speakAnswer(answer);
+        } catch (err) {
+            console.error('Groq API error:', err);
+            if (err.message.includes('401') || err.message.toLowerCase().includes('invalid api key')) {
+                if (answerEl) {
+                    answerEl.textContent = 'Invalid Groq API Key. Please click the ⚙️ button to update your key.';
+                }
+                if (apiKeyDrawer) apiKeyDrawer.classList.remove('hidden');
+                speakAnswer('Your Groq API key is invalid. Please check the settings drawer.');
+            } else {
+                // Fallback to local knowledge base if network/rate error
+                const localAns = findAnswer(question);
+                if (localAns !== FALLBACK_ANSWER) {
+                    if (answerEl) answerEl.textContent = localAns;
+                    speakAnswer(localAns);
+                } else {
+                    if (answerEl) answerEl.textContent = `Error connecting to Groq: ${err.message}`;
+                    speakAnswer('I encountered an error connecting to the neural cortex.');
+                }
+            }
+        }
+    } else {
+        // No Groq API key set: check local knowledge base first
+        const localAns = findAnswer(question);
+        if (localAns !== FALLBACK_ANSWER) {
+            if (answerEl) answerEl.textContent = localAns;
+            speakAnswer(localAns);
+        } else {
+            // Prompt user to add Groq Key to unlock universal knowledge
+            if (apiKeyDrawer) apiKeyDrawer.classList.remove('hidden');
+            if (groqKeyInput) groqKeyInput.focus();
+            const promptMsg = 'To answer any question across the cosmos, please enter your Groq API Key (gsk_...) in the settings drawer above.';
+            if (answerEl) answerEl.textContent = promptMsg;
+            speakAnswer('Please enter your Groq API key in the drawer above to unlock universal intelligence.');
+        }
+    }
 }
 
-// --- 9g. Speech Recognition Setup ---
+// --- 9h. Speech Recognition Setup ---
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 let recognition = null;
 let isListening = false;
@@ -761,7 +841,7 @@ if (SpeechRecognition) {
     setStatus('offline');
 }
 
-// --- 9h. Mic Button Interaction ---
+// --- 9i. Mic Button Interaction ---
 if (micBtn) {
     micBtn.addEventListener('click', () => {
         if (voicePanel) voicePanel.classList.remove('hidden');
@@ -785,7 +865,7 @@ if (micBtn) {
     });
 }
 
-// --- 9i. Interactive Example Question Chips ---
+// --- 9j. Interactive Example Question Chips ---
 if (exampleChips && exampleChips.length > 0) {
     exampleChips.forEach((chip) => {
         chip.addEventListener('click', () => {
@@ -793,6 +873,60 @@ if (exampleChips && exampleChips.length > 0) {
             askOracle(query);
         });
     });
+}
+
+// --- 9k. API Key Drawer & Persistence ---
+if (apiKeyBtn) {
+    apiKeyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (apiKeyDrawer) {
+            apiKeyDrawer.classList.toggle('hidden');
+            if (!apiKeyDrawer.classList.contains('hidden') && groqKeyInput) {
+                groqKeyInput.value = localStorage.getItem('GROQ_API_KEY') || CONFIG.groqApiKey || '';
+                groqKeyInput.focus();
+            }
+        }
+    });
+}
+
+function saveKey() {
+    if (!groqKeyInput) return;
+    const key = groqKeyInput.value.trim();
+    if (key) {
+        localStorage.setItem('GROQ_API_KEY', key);
+        if (saveKeyBtn) {
+            saveKeyBtn.textContent = 'Saved ✓';
+            saveKeyBtn.style.background = 'rgba(74, 222, 128, 0.3)';
+            saveKeyBtn.style.borderColor = 'rgba(74, 222, 128, 0.6)';
+            setTimeout(() => {
+                saveKeyBtn.textContent = 'Save';
+                saveKeyBtn.style.background = '';
+                saveKeyBtn.style.borderColor = '';
+                if (apiKeyDrawer) apiKeyDrawer.classList.add('hidden');
+            }, 1200);
+        }
+        if (answerEl) {
+            answerEl.textContent = 'Groq AI key activated. Ask me any question!';
+        }
+        speakAnswer('Groq artificial intelligence online. Ask me anything.');
+    }
+}
+
+if (saveKeyBtn) {
+    saveKeyBtn.addEventListener('click', saveKey);
+}
+
+if (groqKeyInput) {
+    groqKeyInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            saveKey();
+        }
+    });
+}
+
+// Update API key icon status if already set
+if (getGroqKey() && apiKeyBtn) {
+    apiKeyBtn.title = 'Groq API Key active (Click to change)';
 }
 
 // Pre-load voices for SpeechSynthesis if supported
