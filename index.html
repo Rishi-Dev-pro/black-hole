@@ -10,9 +10,15 @@
 </head>
 <body>
 
-    <!-- ===== Loading Screen ===== -->
+    <!-- ===== Cinematic Aesthetic Loading Screen ===== -->
     <div id="loading-screen">
-        <div class="loader-text">ENTERING THE EVENT HORIZON</div>
+        <div class="loader-singularity">
+            <div class="loader-photon-ring"></div>
+            <div class="loader-event-horizon"></div>
+            <div class="loader-glow"></div>
+        </div>
+        <div class="loader-title">GARGANTUA</div>
+        <div class="loader-subtitle">WARPING SPACETIME CONTINUUM</div>
         <div class="loader-bar"><div class="loader-fill"></div></div>
     </div>
 
@@ -35,7 +41,7 @@
         <span>🎙️ Tap mic to talk</span>
     </div>
 
-    <!-- ===== HUD Stats ===== -->
+    <!-- ===== HUD Stats (Desktop only — hidden on phones to keep header clean) ===== -->
     <div class="hud">
         <div class="stat">
             <span class="stat-label">MASS</span>
@@ -52,7 +58,7 @@
     </div>
 
     <!-- ============================================================
-         VOICE ASSISTANT — ORACLE
+         VOICE ASSISTANT & COMPANION — ORACLE
          Mic button + conversation panel
     ============================================================ -->
     <div class="voice-container">
@@ -65,6 +71,8 @@
                     <span id="persona-badge" class="persona-tag hidden" title="Current personality"></span>
                 </div>
                 <div class="voice-header-actions">
+                    <!-- Pause/Stop button when AI is speaking -->
+                    <button id="voice-pause-btn" class="voice-pause-btn hidden" title="Stop speech" aria-label="Stop speech">⏹ Stop</button>
                     <span id="voice-status" class="status-idle">OFFLINE</span>
                     <button id="voice-close-btn" class="voice-close-btn" title="Close panel" aria-label="Close panel">✕</button>
                 </div>

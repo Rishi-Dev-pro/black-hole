@@ -372,6 +372,7 @@ const personaBadge = document.getElementById('persona-badge');
 const personaHintText = document.getElementById('persona-hint-text');
 const resetPersonaBtn = document.getElementById('reset-persona-btn');
 const voiceCloseBtn = document.getElementById('voice-close-btn');
+const voicePauseBtn = document.getElementById('voice-pause-btn');
 const oracleSpeakerLabel = document.getElementById('oracle-speaker-label');
 
 // Prevent double-clicking the voice controls from resetting the 3D scene camera
@@ -432,54 +433,61 @@ function detectPersonaChange(text) {
     const clean = text.trim().toLowerCase();
 
     // Check reset commands
-    if (/\b(reset\s*(persona|personality|character)?|be\s+(oracle|normal|yourself)|stop\s+(acting|pretending)|back\s+to\s+normal)\b/i.test(clean)) {
+    if (/\b(reset|stop\s+(acting|pretending)|be\s+(yourself|oracle|normal)|back\s+to\s+normal|default)\b/i.test(clean)) {
         return { type: 'reset' };
     }
 
-    // Girlfriend / waifu
-    if (/\b(act like|be|pretend to be|you are|become|turn into)\s+(my\s+)?(gf|girlfriend|waifu|sweetheart)\b/i.test(clean)) {
-        return {
-            type: 'set',
-            persona: {
-                role: 'girlfriend',
-                title: 'Girlfriend',
-                gender: 'female'
-            }
-        };
-    }
-
-    // Boyfriend / husband
-    if (/\b(act like|be|pretend to be|you are|become|turn into)\s+(my\s+)?(bf|boyfriend|husband)\b/i.test(clean)) {
+    // Boyfriend detection: any combination of bf/boyfriend/husband/hubby with act/be/pretend/treat/like/as/role
+    const isBfWord = /\b(bf|boyfriend|husband|hubby|bae|boo)\b/i.test(clean);
+    const hasRoleContext = /\b(act|as|like|be|become|pretend|play|treat|role|you|my|can|will|want|would)\b/i.test(clean);
+    if (isBfWord && (hasRoleContext || clean.length < 30)) {
         return {
             type: 'set',
             persona: {
                 role: 'boyfriend',
                 title: 'Boyfriend',
-                gender: 'male'
+                gender: 'male',
+                accent: 'american_boy'
             }
         };
     }
 
-    // Best friend / bestie / homie
-    if (/\b(act like|be|pretend to be|you are|become|turn into)\s+(my\s+)?(best\s*friend|bestie|homie|bro|friend)\b/i.test(clean)) {
+    // Girlfriend detection
+    const isGfWord = /\b(gf|girlfriend|wife|waifu|sweetheart|babe|baby)\b/i.test(clean);
+    if (isGfWord && (hasRoleContext || clean.length < 30)) {
+        return {
+            type: 'set',
+            persona: {
+                role: 'girlfriend',
+                title: 'Girlfriend',
+                gender: 'female',
+                accent: 'anime_girl'
+            }
+        };
+    }
+
+    // Best friend detection
+    const isBestie = /\b(best\s*friend|bestie|homie|bro|brother|friend)\b/i.test(clean);
+    if (isBestie && (hasRoleContext || clean.length < 30)) {
         return {
             type: 'set',
             persona: {
                 role: 'best_friend',
                 title: 'Best Friend',
-                gender: 'female'
+                gender: 'female',
+                accent: 'friendly'
             }
         };
     }
 
-    // Arbitrary custom persona requested by user (e.g. "act like Tony Stark", "act like my sister")
-    const match = clean.match(/\b(?:act like|pretend to be|behave like|roleplay as|you are)\s+(?:a|an|my)?\s*([a-z0-9\s'-]{2,25})\b/i);
+    // Arbitrary custom persona: "act as / act like / pretend to be [name]"
+    const match = clean.match(/\b(?:act\s+(?:as\s+)?(?:like\s+)?|pretend\s+(?:to\s+be\s+)?|be\s+(?:like\s+)?|play\s+(?:as\s+)?|roleplay\s+(?:as\s+)?|behave\s+(?:like\s+)?)\s*(?:a|an|my)?\s*([a-z0-9\s'-]{2,25})\b/i);
     if (match && match[1]) {
         const raw = match[1].trim();
-        const ignoreList = ['stupid', 'dumb', 'crazy', 'here', 'that', 'this', 'ready', 'listening'];
+        const ignoreList = ['stupid', 'dumb', 'crazy', 'here', 'that', 'this', 'ready', 'listening', 'ai', 'bot'];
         if (!ignoreList.includes(raw)) {
             const capitalized = raw.charAt(0).toUpperCase() + raw.slice(1);
-            const isMale = /\b(boy|man|guy|brother|father|dad|husband|king|prince)\b/i.test(raw);
+            const isMale = /\b(boy|man|guy|brother|father|dad|husband|king|prince|bf|boyfriend)\b/i.test(raw);
             return {
                 type: 'set',
                 persona: {
@@ -494,13 +502,32 @@ function detectPersonaChange(text) {
     return null;
 }
 
+// Stop speaking function (pauses / cancels TTS and hides pause button)
+function stopSpeaking() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+    setStatus('idle');
+    if (voicePauseBtn) {
+        voicePauseBtn.classList.add('hidden');
+    }
+}
+
+// Pause / Stop speaking button listener
+if (voicePauseBtn) {
+    voicePauseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        stopSpeaking();
+    });
+}
+
 // Close panel button
 if (voiceCloseBtn) {
     voiceCloseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (voicePanel) voicePanel.classList.add('hidden');
         document.body.classList.remove('voice-open');
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        stopSpeaking();
     });
 }
 
@@ -522,12 +549,44 @@ function getVoiceForPersona(voices, persona) {
     const isMale = persona && persona.gender === 'male';
 
     if (isMale) {
-        // Natural male voice (Guy, Ryan, David, George, Ichiro)
-        const maleVoice = voices.find(v => {
+        // Young handsome American boy voice search:
+        // 1. Natural American male voices (Christopher, Guy, Ryan, David, Aaron, Alex, Daniel)
+        const naturalUsMale = voices.find(v => {
             const name = (v.name || '').toLowerCase();
-            return (name.includes('guy') || name.includes('ryan') || name.includes('david') || name.includes('george') || name.includes('male') || name.includes('ichiro')) && !name.includes('female');
+            const lang = (v.lang || '').toLowerCase();
+            const isUs = lang.includes('en-us') || lang.includes('en_us') || lang === 'en';
+            const isNamed = name.includes('christopher') || name.includes('guy') || name.includes('ryan') ||
+                            name.includes('david') || name.includes('aaron') || name.includes('alex') ||
+                            name.includes('nathan') || name.includes('daniel');
+            return isUs && isNamed && !name.includes('female');
         });
-        if (maleVoice) return maleVoice;
+        if (naturalUsMale) return naturalUsMale;
+
+        // 2. Android Chrome Google US male voices (tagged with male in name or locale)
+        const androidMale = voices.find(v => {
+            const name = (v.name || '').toLowerCase();
+            const lang = (v.lang || '').toLowerCase();
+            const isEn = lang.startsWith('en');
+            const hasMaleTag = name.includes('male') || name.includes('#male') || name.includes('m-') || name.includes('man');
+            return isEn && hasMaleTag && !name.includes('female');
+        });
+        if (androidMale) return androidMale;
+
+        // 3. Any English voice that is not explicitly marked female
+        const generalUsMale = voices.find(v => {
+            const name = (v.name || '').toLowerCase();
+            const lang = (v.lang || '').toLowerCase();
+            const isUs = lang.includes('en-us') || lang.includes('en_us');
+            const isNotFemale = !name.includes('female') && !name.includes('zira') &&
+                                !name.includes('samantha') && !name.includes('victoria') &&
+                                !name.includes('jenny') && !name.includes('aria');
+            return isUs && isNotFemale;
+        });
+        if (generalUsMale) return generalUsMale;
+
+        // 4. Any English voice
+        const anyEn = voices.find(v => (v.lang || '').toLowerCase().startsWith('en') && !v.name.toLowerCase().includes('female'));
+        if (anyEn) return anyEn;
     } else {
         // Japanese female / anime voice
         const jpFemale = voices.find(v => {
@@ -570,20 +629,42 @@ function speakAnswer(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     const isMale = currentPersona && currentPersona.gender === 'male';
 
-    // Acoustic tuning: anime girl (1.32) vs male companion (0.92)
-    utterance.pitch = isMale ? 0.92 : (CONFIG.voicePitch || 1.32);
-    utterance.rate = CONFIG.voiceRate || 1.05;
+    if (isMale) {
+        // Young handsome American boy profile: natural, warm, confident resonance
+        utterance.pitch = 1.02;
+        utterance.rate = 1.0;
+        utterance.lang = 'en-US';
+    } else {
+        // Japanese anime girl profile: bright, youthful, melodic tone
+        utterance.pitch = CONFIG.voicePitch || 1.32;
+        utterance.rate = CONFIG.voiceRate || 1.05;
+    }
 
     const voices = window.speechSynthesis.getVoices();
     const voice = getVoiceForPersona(voices, currentPersona);
     if (voice) {
         utterance.voice = voice;
-        if (voice.lang) utterance.lang = voice.lang;
+        if (voice.lang && !isMale) utterance.lang = voice.lang;
     }
 
-    utterance.onstart = () => setStatus('speaking');
-    utterance.onend = () => setStatus('idle');
-    utterance.onerror = () => setStatus('idle');
+    utterance.onstart = () => {
+        setStatus('speaking');
+        if (voicePauseBtn) voicePauseBtn.classList.remove('hidden');
+    };
+
+    utterance.onend = () => {
+        setStatus('idle');
+        if (voicePauseBtn) voicePauseBtn.classList.add('hidden');
+    };
+
+    utterance.onerror = () => {
+        setStatus('idle');
+        if (voicePauseBtn) voicePauseBtn.classList.add('hidden');
+    };
+
+    if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+    }
 
     window.speechSynthesis.speak(utterance);
 }
@@ -819,12 +900,17 @@ if (SpeechRecognition) {
     setStatus('offline');
 }
 
-// --- 9h. Mic Button Interaction ---
+// --- 9h. Mic Button Interaction (with instant speech interruption) ---
 if (micBtn) {
     micBtn.addEventListener('click', () => {
         if (voicePanel) {
             voicePanel.classList.remove('hidden');
             document.body.classList.add('voice-open');
+        }
+
+        // If AI is currently speaking, stop it immediately so user can talk!
+        if (currentPhase === 'speaking' || ('speechSynthesis' in window && window.speechSynthesis.speaking)) {
+            stopSpeaking();
         }
 
         if (!recognition) {
@@ -854,22 +940,45 @@ if ('speechSynthesis' in window) {
 }
 
 /* ------------------------------------------------------------
-   10. MAIN LOOP
+   10. MAIN LOOP — With Living Black Hole Voice Dynamics
 ------------------------------------------------------------ */
 const clock = new THREE.Clock();
 let firstFrame = true;
+let speechEnergy = 0.0; // Dynamic vocal pulsation (0.0 = calm cosmic idle, 1.0 = speaking living black hole)
 
 function animate() {
     requestAnimationFrame(animate);
     const dt = clock.getDelta();
     const t = clock.elapsedTime;
 
-    // Disk swirl
-    diskMaterial.uniforms.uTime.value = t;
+    // Living Black Hole: Light dynamics react to AI speaking / pause state
+    const isSpeakingNow = (currentPhase === 'speaking');
+    const targetEnergy = isSpeakingNow ? 1.0 : 0.0;
+    // Smooth harmonic attack and release
+    speechEnergy += (targetEnergy - speechEnergy) * (isSpeakingNow ? 0.12 : 0.06);
 
-    // Subtle breathing of the ring & halo
-    photonRing.material.opacity = 0.75 + Math.sin(t * 2.0) * 0.15;
-    halo.material.opacity = 0.85 + Math.sin(t * 1.3) * 0.10;
+    // Accelerate accretion disk swirl dynamically with speech rhythm
+    const swirlRate = 1.0 + speechEnergy * 2.2;
+    diskMaterial.uniforms.uTime.value += dt * swirlRate;
+
+    // Living harmonic breathing of the photon ring & gravitational halo
+    if (speechEnergy > 0.01) {
+        const vocalPulse1 = Math.sin(t * 8.0) * 0.18 * speechEnergy;
+        const vocalPulse2 = Math.cos(t * 13.0) * 0.10 * speechEnergy;
+        const ringScale = 1.0 + (Math.sin(t * 5.0) * 0.035 + Math.sin(t * 9.5) * 0.02) * speechEnergy;
+
+        photonRing.material.opacity = THREE.MathUtils.clamp(0.75 + vocalPulse1 + vocalPulse2 + speechEnergy * 0.15, 0.4, 1.0);
+        photonRing.scale.set(ringScale, ringScale, ringScale);
+
+        halo.material.opacity = THREE.MathUtils.clamp(0.85 + vocalPulse1 * 1.2 + speechEnergy * 0.15, 0.5, 1.0);
+        const haloScale = CONFIG.haloScale * (1.0 + (Math.sin(t * 4.5) * 0.06 + Math.cos(t * 9.0) * 0.03) * speechEnergy);
+        halo.scale.set(haloScale, haloScale, haloScale);
+    } else {
+        photonRing.material.opacity = 0.75 + Math.sin(t * 2.0) * 0.15;
+        photonRing.scale.set(1.0, 1.0, 1.0);
+        halo.material.opacity = 0.85 + Math.sin(t * 1.3) * 0.10;
+        halo.scale.set(CONFIG.haloScale, CONFIG.haloScale, CONFIG.haloScale);
+    }
 
     // Twinkling near-star layer + slow sky rotation
     starsNear.material.opacity = 0.75 + Math.sin(t * 2.4) * 0.2;

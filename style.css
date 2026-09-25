@@ -37,19 +37,19 @@ html, body {
 }
 
 /* ============================================================
-   LOADING SCREEN
+   AESTHETIC LOADING SCREEN
    ============================================================ */
 #loading-screen {
     position: fixed;
     inset: 0;
     z-index: 100;
-    background: radial-gradient(ellipse at center, #0a0a12 0%, #000 70%);
+    background: radial-gradient(circle at center, #0e0c16 0%, #040308 60%, #000000 100%);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 28px;
-    transition: opacity 1.2s ease, visibility 1.2s ease;
+    gap: 18px;
+    transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.2s ease;
 }
 
 /* JS adds .hidden when the scene is ready */
@@ -59,41 +59,92 @@ html, body {
     pointer-events: none;
 }
 
-.loader-text {
-    font-size: clamp(14px, 2.5vw, 22px);
-    font-weight: 300;
-    letter-spacing: 0.6em;
-    text-indent: 0.6em;        /* balances letter-spacing */
-    color: #ffb56b;
-    text-shadow: 0 0 20px rgba(255, 150, 60, 0.6);
-    animation: pulse 2s ease-in-out infinite;
+/* Miniature Event Horizon & Pulsing Photon Ring */
+.loader-singularity {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+.loader-glow {
+    position: absolute;
+    inset: -18px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 140, 50, 0.3) 0%, rgba(255, 90, 20, 0.08) 50%, transparent 70%);
+    filter: blur(12px);
+    animation: loaderBreathe 2.8s ease-in-out infinite;
+}
+
+.loader-photon-ring {
+    position: absolute;
+    inset: 4px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top: 2.5px solid #ffbe76;
+    border-right: 2px solid #ff793f;
+    border-bottom: 2px solid rgba(255, 121, 63, 0.25);
+    box-shadow: 0 0 25px rgba(255, 150, 60, 0.8), inset 0 0 15px rgba(255, 120, 40, 0.5);
+    animation: loaderSpin 1.8s linear infinite;
+}
+
+.loader-event-horizon {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    background: #000;
+    box-shadow: 0 0 18px rgba(0, 0, 0, 0.95), inset 0 0 10px rgba(0, 0, 0, 1);
+    border: 1px solid rgba(255, 150, 60, 0.18);
+}
+
+.loader-title {
+    font-size: clamp(16px, 3.8vw, 24px);
+    font-weight: 200;
+    letter-spacing: 0.55em;
+    text-indent: 0.55em;
+    color: #fff;
+    text-shadow: 0 0 22px rgba(255, 170, 90, 0.7);
+    animation: pulse 2.4s ease-in-out infinite;
+}
+
+.loader-subtitle {
+    font-size: 8.5px;
+    font-weight: 400;
+    letter-spacing: 0.35em;
+    text-indent: 0.35em;
+    color: rgba(255, 180, 120, 0.65);
+    margin-top: -6px;
 }
 
 .loader-bar {
-    width: min(320px, 60vw);
+    width: min(220px, 60vw);
     height: 2px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 2px;
     overflow: hidden;
+    margin-top: 6px;
 }
 
 .loader-fill {
-    width: 40%;
+    width: 45%;
     height: 100%;
-    background: linear-gradient(90deg, #ff6b1a, #ffc46b);
+    background: linear-gradient(90deg, #ff5722, #ffb300, #ff5722);
     border-radius: 2px;
-    box-shadow: 0 0 12px rgba(255, 140, 50, 0.8);
-    animation: slide 1.4s ease-in-out infinite;
+    box-shadow: 0 0 14px rgba(255, 150, 50, 0.9);
+    animation: slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
-@keyframes slide {
-    0%   { transform: translateX(-100%); }
-    100% { transform: translateX(350%); }
+@keyframes loaderSpin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%      { opacity: 0.4; }
+@keyframes loaderBreathe {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50%      { transform: scale(1.25); opacity: 1; }
 }
 
 /* ============================================================
@@ -298,6 +349,37 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.voice-pause-btn {
+    background: rgba(255, 80, 80, 0.2);
+    border: 1px solid rgba(255, 110, 110, 0.5);
+    color: #ff9e9e;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    transition: all 0.2s ease;
+    animation: pauseGlow 1.2s ease-in-out infinite;
+}
+
+.voice-pause-btn:hover {
+    background: rgba(255, 80, 80, 0.4);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(255, 90, 90, 0.5);
+}
+
+.voice-pause-btn.hidden {
+    display: none;
+}
+
+@keyframes pauseGlow {
+    0%, 100% { box-shadow: 0 0 6px rgba(255, 80, 80, 0.3); }
+    50%      { box-shadow: 0 0 14px rgba(255, 80, 80, 0.7); }
 }
 
 .voice-close-btn {
@@ -617,6 +699,83 @@ html, body {
     #voice-panel {
         width: min(380px, calc(100vw - 28px));
         max-height: 58vh;
+/* ============================================================
+   RESPONSIVE DESIGN (Tablets & Mobile Phones)
+   ============================================================ */
+@media (max-width: 768px) {
+    /* Hide the HUD entirely on phones so GARGANTUA is never covered */
+    .hud {
+        display: none !important;
+    }
+
+    .ui-overlay {
+        top: max(22px, env(safe-area-inset-top, 22px));
+        left: 0;
+        right: 0;
+        text-align: center;
+        padding: 0 16px;
+    }
+
+    .title {
+        font-size: clamp(26px, 8.5vw, 38px);
+        letter-spacing: 0.32em;
+        text-indent: 0.32em;
+    }
+
+    .subtitle {
+        font-size: 9.5px;
+        letter-spacing: 0.22em;
+        margin-top: 4px;
+        color: rgba(255, 200, 160, 0.65);
+    }
+
+    .desktop-hint {
+        display: none !important;
+    }
+
+    .mobile-hint {
+        display: inline-block !important;
+    }
+
+    .controls-hint {
+        bottom: 24px;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 0 12px;
+        pointer-events: none;
+    }
+
+    .controls-hint span {
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    /* On mobile, if voice panel is open, tuck hints away */
+    body.voice-open .controls-hint {
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .voice-container {
+        bottom: max(16px, env(safe-area-inset-bottom, 16px));
+        right: max(16px, env(safe-area-inset-right, 16px));
+        gap: 12px;
+    }
+
+    #mic-btn {
+        width: 56px;
+        height: 56px;
+    }
+
+    #mic-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    #voice-panel {
+        width: min(380px, calc(100vw - 28px));
+        max-height: 58vh;
         border-radius: 14px;
     }
 
@@ -638,45 +797,12 @@ html, body {
 
 /* Extra small mobile phones (e.g. iPhone SE, 360px screens) */
 @media (max-width: 480px) {
-    .ui-overlay {
-        top: max(16px, env(safe-area-inset-top, 16px));
-        left: max(16px, env(safe-area-inset-left, 16px));
+    .hud {
+        display: none !important;
     }
 
     .title {
         font-size: 24px;
-    }
-
-    .hud {
-        position: fixed;
-        top: max(16px, env(safe-area-inset-top, 16px));
-        right: max(16px, env(safe-area-inset-right, 16px));
-        bottom: auto;
-        left: auto;
-        flex-direction: row;
-        gap: 10px;
-        background: rgba(8, 8, 14, 0.45);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 160, 80, 0.14);
-        padding: 6px 10px;
-        border-radius: 10px;
-    }
-
-    .stat {
-        border-left: none;
-        border-bottom: 2px solid rgba(255, 150, 60, 0.6);
-        padding-left: 0;
-        padding-bottom: 2px;
-        gap: 1px;
-    }
-
-    .stat-label {
-        font-size: 7px;
-    }
-
-    .stat-value {
-        font-size: 9.5px;
     }
 
     #voice-panel {
