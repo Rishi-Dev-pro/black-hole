@@ -18,9 +18,11 @@ const CONFIG = {
     haloScale: 20,               // lensed glow size
     flySpeed: 0.18,              // WASD speed
     cameraStart: new THREE.Vector3(0, 4.5, 14),
-    voiceLang: 'en-IN',          // voice recognition & synthesis language
+    voiceLang: 'en-US',          // voice recognition & synthesis language
     groqApiKey: '',              // Kept secure on server (Vercel GROQ_API_KEY) or set via localStorage
     groqModel: 'qwen/qwen3.8-27b', // ultra-fast, high-intelligence Groq model
+    voicePitch: 1.32,            // elevated pitch for bright, youthful anime girl tone
+    voiceRate: 1.05,             // crisp, lively delivery
 };
 
 /* ------------------------------------------------------------
@@ -373,6 +375,48 @@ if (voiceContainer) {
     voiceContainer.addEventListener('dblclick', (e) => e.stopPropagation());
 }
 
+// Helper: Find the best Japanese female / anime-style voice available
+function getJapaneseGirlVoice(voices) {
+    if (!voices || voices.length === 0) return null;
+
+    // 1. Japanese female voices (Microsoft Nanami, Ayumi, Keiko, Haruka, Kyoko, Google 日本語)
+    const jpFemale = voices.find(v => {
+        const name = (v.name || '').toLowerCase();
+        const lang = (v.lang || '').toLowerCase();
+        const isJp = lang.startsWith('ja') || name.includes('japan') || name.includes('nihon');
+        const isFemale = name.includes('nanami') || name.includes('ayumi') || name.includes('keiko') ||
+                         name.includes('haruka') || name.includes('kyoko') || name.includes('mayu') ||
+                         name.includes('female') || name.includes('natural');
+        return isJp && isFemale;
+    });
+    if (jpFemale) return jpFemale;
+
+    // 2. Any Japanese language voice that is not male
+    const anyJp = voices.find(v => {
+        const name = (v.name || '').toLowerCase();
+        const lang = (v.lang || '').toLowerCase();
+        return (lang.startsWith('ja') || name.includes('japan')) && !name.includes('ichiro') && !name.includes('male');
+    });
+    if (anyJp) return anyJp;
+
+    // 3. High-quality natural English female voices with bright tones (Jenny, Aria, Google US/UK Female, Samantha, Zira)
+    const naturalFemale = voices.find(v => {
+        const name = (v.name || '').toLowerCase();
+        return (name.includes('natural') || name.includes('online') || name.includes('google')) &&
+               (name.includes('female') || name.includes('jenny') || name.includes('aria') || name.includes('samantha') || name.includes('zira'));
+    });
+    if (naturalFemale) return naturalFemale;
+
+    // 4. Any female voice on the system
+    const anyFemale = voices.find(v => {
+        const name = (v.name || '').toLowerCase();
+        return !name.includes('male') && (name.includes('female') || name.includes('zira') || name.includes('samantha') || name.includes('karen') || name.includes('victoria'));
+    });
+    if (anyFemale) return anyFemale;
+
+    return voices[0];
+}
+
 // --- 9b. Speech Synthesis (Audio Output) ---
 function speakAnswer(text) {
     if (!('speechSynthesis' in window)) {
@@ -383,14 +427,17 @@ function speakAnswer(text) {
     window.speechSynthesis.cancel(); // Cancel any lingering audio
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    utterance.pitch = 0.90;
+    // Anime girl acoustic signature: higher pitch (youthful, bright) and slightly upbeat cadence
+    utterance.pitch = CONFIG.voicePitch || 1.32;
+    utterance.rate = CONFIG.voiceRate || 1.05;
 
-    // Pick an appropriate English voice if available
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Male')));
-    if (preferredVoice) {
-        utterance.voice = preferredVoice;
+    const girlVoice = getJapaneseGirlVoice(voices);
+    if (girlVoice) {
+        utterance.voice = girlVoice;
+        if (girlVoice.lang) {
+            utterance.lang = girlVoice.lang;
+        }
     }
 
     utterance.onstart = () => setStatus('speaking');
@@ -447,8 +494,9 @@ async function queryGroq(question) {
     }
 
     // 2. Direct client-side Groq call (used when testing locally without a serverless backend)
-    const systemPrompt = `You are ORACLE, an omniscient, articulate AI guide anchored to the Gargantua supermassive black hole simulation.
-Answer the user's question accurately, intelligently, and concisely in 1 to 3 spoken-friendly sentences.
+    const systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.
+Answer the user's question accurately, intelligently, and warmly in 1 to 3 spoken-friendly sentences.
+You may occasionally begin with a polite acknowledgment (such as "Hai!" or "Understood!") when fitting, while explaining the answer clearly in fluent spoken English.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
 
