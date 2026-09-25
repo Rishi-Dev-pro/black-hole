@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Black Hole — 3D Simulation</title>
+
+    <!-- CSS file (Part 2) -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- ===== Loading Screen ===== -->
+    <div id="loading-screen">
+        <div class="loader-text">ENTERING THE EVENT HORIZON</div>
+        <div class="loader-bar"><div class="loader-fill"></div></div>
+    </div>
+
+    <!-- ===== 3D Scene Canvas ===== -->
+    <canvas id="blackhole-canvas"></canvas>
+
+    <!-- ===== UI Overlay ===== -->
+    <div class="ui-overlay">
+        <h1 class="title">GARGANTUA</h1>
+        <p class="subtitle">A real-time 3D black hole simulation</p>
+    </div>
+
+    <!-- ===== Controls Hint ===== -->
+    <div class="controls-hint">
+        <span>🖱️ Drag to orbit</span>
+        <span>🔍 Scroll to zoom</span>
+        <span>⌨️ WASD to fly</span>
+        <span>🎙️ Click mic to talk</span>
+    </div>
+
+    <!-- ===== HUD Stats ===== -->
+    <div class="hud">
+        <div class="stat">
+            <span class="stat-label">MASS</span>
+            <span class="stat-value">4.3 × 10⁶ M☉</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">SCHWARZSCHILD RADIUS</span>
+            <span class="stat-value">12.7 × 10⁶ km</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">DISK TEMP</span>
+            <span class="stat-value">~10⁷ K</span>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         NEW: VOICE ASSISTANT — ORACLE
+         Mic button + conversation panel
+    ============================================================ -->
+    <div class="voice-container">
+
+        <!-- Conversation Panel (appears when mic is used) -->
+        <div id="voice-panel" class="hidden">
+            <div class="voice-header">
+                <span class="voice-title">🔮 ORACLE</span>
+                <span id="voice-status" class="status-idle">OFFLINE</span>
+            </div>
+
+            <div class="voice-body">
+                <!-- What you said -->
+                <div class="voice-row user-row">
+                    <span class="voice-name">YOU</span>
+                    <p id="voice-transcript">Press the mic and ask me something...</p>
+                </div>
+                <!-- What ORACLE answered -->
+                <div class="voice-row oracle-row">
+                    <span class="voice-name">ORACLE</span>
+                    <p id="voice-answer">I can answer questions about math formulas, and the politics of India and major countries.</p>
+                </div>
+            </div>
+
+            <!-- Example questions the user can try -->
+            <div class="voice-examples">
+                <span class="example-chip">"what is pythagoras theorem"</span>
+                <span class="example-chip">"who is the prime minister of india"</span>
+                <span class="example-chip">"area of circle formula"</span>
+                <span class="example-chip">"who is the president of usa"</span>
+            </div>
+        </div>
+
+        <!-- Mic Button -->
+        <button id="mic-btn" title="Talk to ORACLE">
+            <!-- Mic icon (inline SVG so no image files needed) -->
+            <svg id="mic-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C10.34 2 9 3.34 9 5V12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12V5C15 3.34 13.66 2 12 2Z" fill="currentColor"/>
+                <path d="M17 12C17 14.76 14.76 17 12 17C9.24 17 7 14.76 7 12H5C5 15.53 7.61 18.43 11 18.92V21H13V18.92C16.39 18.43 19 15.53 19 12H17Z" fill="currentColor"/>
+            </svg>
+            <!-- Pulsing rings shown while listening (CSS animation) -->
+            <span class="mic-ring ring-1"></span>
+            <span class="mic-ring ring-2"></span>
+        </button>
+
+    </div>
+
+    <!-- ===== Three.js via CDN (import map for ES modules) ===== -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <!-- ===== JS file (Part 3) ===== -->
+    <script type="module" src="script.js"></script>
+
+</body>
+</html>

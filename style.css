@@ -1,0 +1,520 @@
+/* ============================================================
+   BLACK HOLE — 3D Simulation | Stylesheet
+   Theme: Deep space, Interstellar-style amber glow
+   ============================================================ */
+
+/* ---------- Reset & Base ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;          /* no scrollbars — fullscreen experience */
+    background: #000;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #fff;
+    user-select: none;
+}
+
+/* ---------- 3D Canvas ---------- */
+#blackhole-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 0;                /* behind all UI layers */
+    touch-action: none;        /* enables smooth touchpad & touch drag gestures */
+    cursor: grab;
+}
+
+#blackhole-canvas:active {
+    cursor: grabbing;
+}
+
+/* ============================================================
+   LOADING SCREEN
+   ============================================================ */
+#loading-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: radial-gradient(ellipse at center, #0a0a12 0%, #000 70%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 28px;
+    transition: opacity 1.2s ease, visibility 1.2s ease;
+}
+
+/* JS adds .hidden when the scene is ready */
+#loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.loader-text {
+    font-size: clamp(14px, 2.5vw, 22px);
+    font-weight: 300;
+    letter-spacing: 0.6em;
+    text-indent: 0.6em;        /* balances letter-spacing */
+    color: #ffb56b;
+    text-shadow: 0 0 20px rgba(255, 150, 60, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.loader-bar {
+    width: min(320px, 60vw);
+    height: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.loader-fill {
+    width: 40%;
+    height: 100%;
+    background: linear-gradient(90deg, #ff6b1a, #ffc46b);
+    border-radius: 2px;
+    box-shadow: 0 0 12px rgba(255, 140, 50, 0.8);
+    animation: slide 1.4s ease-in-out infinite;
+}
+
+@keyframes slide {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(350%); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.4; }
+}
+
+/* ============================================================
+   UI OVERLAY — Title & Subtitle
+   ============================================================ */
+.ui-overlay {
+    position: fixed;
+    top: 42px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    text-align: center;
+    pointer-events: none;       /* clicks pass through to the 3D scene */
+    animation: fadeDown 2s ease 0.5s both;
+}
+
+.title {
+    font-size: clamp(32px, 6vw, 72px);
+    font-weight: 100;
+    letter-spacing: 0.45em;
+    text-indent: 0.45em;
+    color: #fff;
+    text-shadow:
+        0 0 10px rgba(255, 180, 100, 0.4),
+        0 0 40px rgba(255, 120, 40, 0.25),
+        0 0 80px rgba(255, 100, 20, 0.15);
+}
+
+.subtitle {
+    margin-top: 10px;
+    font-size: clamp(10px, 1.4vw, 14px);
+    font-weight: 300;
+    letter-spacing: 0.35em;
+    text-indent: 0.35em;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+}
+
+/* ============================================================
+   CONTROLS HINT — bottom center
+   ============================================================ */
+.controls-hint {
+    position: fixed;
+    bottom: 34px;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    pointer-events: none;
+    animation: fadeUp 2s ease 1s both;
+}
+
+.controls-hint span {
+    font-size: 12px;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 6px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.25);
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.controls-hint span:hover {
+    color: rgba(255, 200, 140, 0.9);
+    border-color: rgba(255, 160, 80, 0.3);
+}
+
+/* ============================================================
+   HUD — Stats panel, bottom left
+   ============================================================ */
+.hud {
+    position: fixed;
+    bottom: 34px;
+    left: 34px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    pointer-events: none;
+    animation: fadeUp 2s ease 1.4s both;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 12px;
+    border-left: 2px solid rgba(255, 150, 60, 0.5);
+}
+
+.stat-label {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: rgba(255, 170, 100, 0.65);
+}
+
+.stat-value {
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.85);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   NEW: VOICE ASSISTANT — ORACLE
+   Mic button + conversation panel, bottom right
+   ============================================================ */
+.voice-container {
+    position: fixed;
+    bottom: 34px;
+    right: 34px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 16px;
+    animation: fadeUp 2s ease 1.8s both;
+}
+
+/* ---------- Conversation Panel ---------- */
+#voice-panel {
+    width: min(360px, calc(100vw - 40px));
+    background: rgba(8, 8, 14, 0.72);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 160, 80, 0.18);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.6),
+        0 0 30px rgba(255, 120, 40, 0.08);
+    transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s ease;
+}
+
+/* JS toggles .hidden when mic is used */
+#voice-panel.hidden {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Panel header */
+.voice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 160, 80, 0.12);
+    background: rgba(255, 140, 50, 0.04);
+}
+
+.voice-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: #ffc46b;
+    text-shadow: 0 0 12px rgba(255, 150, 60, 0.4);
+}
+
+/* Status badge — JS swaps these classes */
+#voice-status {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    padding: 4px 10px;
+    border-radius: 10px;
+    border: 1px solid;
+    transition: all 0.3s ease;
+}
+
+.status-idle {
+    color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.status-listening {
+    color: #ffb56b;
+    border-color: rgba(255, 160, 80, 0.5);
+    background: rgba(255, 140, 50, 0.1);
+    animation: statusPulse 1.2s ease-in-out infinite;
+}
+
+.status-thinking {
+    color: #7ec8ff;
+    border-color: rgba(126, 200, 255, 0.5);
+    background: rgba(126, 200, 255, 0.08);
+    animation: statusPulse 0.8s ease-in-out infinite;
+}
+
+.status-speaking {
+    color: #7dffb0;
+    border-color: rgba(125, 255, 176, 0.5);
+    background: rgba(125, 255, 176, 0.08);
+    animation: statusPulse 1.4s ease-in-out infinite;
+}
+
+/* Panel body — chat rows */
+.voice-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.voice-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.user-row {
+    border-left: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.oracle-row {
+    border-left: 2px solid rgba(255, 150, 60, 0.6);
+    background: rgba(255, 140, 50, 0.05);
+}
+
+.voice-name {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.oracle-row .voice-name {
+    color: rgba(255, 170, 100, 0.8);
+}
+
+.voice-body p {
+    font-size: 13px;
+    font-weight: 300;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.85);
+    max-height: 140px;
+    overflow-y: auto;           /* long answers scroll instead of stretching */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 150, 60, 0.3) transparent;
+}
+
+/* Example question chips */
+.voice-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 12px 12px;
+}
+
+.example-chip {
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    padding: 5px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 160, 80, 0.2);
+    color: rgba(255, 200, 150, 0.7);
+    background: rgba(255, 140, 50, 0.04);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.25s ease;
+}
+
+.example-chip:hover {
+    color: #ffc46b;
+    border-color: rgba(255, 160, 80, 0.55);
+    background: rgba(255, 140, 50, 0.15);
+    box-shadow: 0 0 12px rgba(255, 140, 50, 0.25);
+}
+
+/* ---------- Mic Button ---------- */
+#mic-btn {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 160, 80, 0.35);
+    background: rgba(10, 8, 6, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffc46b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(255, 140, 50, 0.25);
+    transition: transform 0.25s ease, box-shadow 0.3s ease,
+                background 0.3s ease, border-color 0.3s ease;
+}
+
+#mic-btn:hover {
+    transform: scale(1.08);
+    border-color: rgba(255, 180, 100, 0.6);
+    box-shadow: 0 0 30px rgba(255, 140, 50, 0.45);
+}
+
+#mic-btn:active {
+    transform: scale(0.95);
+}
+
+#mic-icon {
+    width: 26px;
+    height: 26px;
+    filter: drop-shadow(0 0 6px rgba(255, 160, 80, 0.5));
+    transition: transform 0.3s ease;
+}
+
+/* Listening state — JS adds .listening */
+#mic-btn.listening {
+    background: rgba(255, 90, 30, 0.18);
+    border-color: rgba(255, 120, 60, 0.8);
+    box-shadow: 0 0 35px rgba(255, 110, 40, 0.55);
+    animation: micGlow 1.2s ease-in-out infinite;
+}
+
+#mic-btn.listening #mic-icon {
+    transform: scale(1.15);
+}
+
+/* Pulsing rings around the mic while listening */
+.mic-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 140, 60, 0.6);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#mic-btn.listening .ring-1 { animation: ringPulse 1.6s ease-out infinite; }
+#mic-btn.listening .ring-2 { animation: ringPulse 1.6s ease-out 0.5s infinite; }
+
+/* ---------- Voice Animations ---------- */
+@keyframes ringPulse {
+    0%   { transform: scale(1);   opacity: 0.8; }
+    100% { transform: scale(1.9); opacity: 0; }
+}
+
+@keyframes micGlow {
+    0%, 100% { box-shadow: 0 0 25px rgba(255, 110, 40, 0.45); }
+    50%      { box-shadow: 0 0 45px rgba(255, 110, 40, 0.75); }
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.45; }
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    .hud {
+        bottom: 90px;           /* moves above the controls hint */
+        left: 20px;
+        gap: 10px;
+    }
+
+    .controls-hint {
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 0 16px;
+    }
+
+    .controls-hint span {
+        font-size: 10px;
+        padding: 4px 10px;
+    }
+
+    .stat-value {
+        font-size: 12px;
+    }
+
+    /* NEW: voice UI on mobile */
+    .voice-container {
+        bottom: 20px;
+        right: 16px;
+        gap: 12px;
+    }
+
+    #mic-btn {
+        width: 54px;
+        height: 54px;
+    }
+
+    #mic-icon {
+        width: 22px;
+        height: 22px;
+    }
+
+    #voice-panel {
+        width: calc(100vw - 32px);
+    }
+
+    .voice-body p {
+        font-size: 12px;
+        max-height: 100px;
+    }
+}
