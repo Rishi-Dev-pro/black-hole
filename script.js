@@ -869,8 +869,8 @@ const COMPANION_PROFILES = {
         gender: 'male',
         title: 'Desi BF',
         btn: testDesiBoyVoiceBtn,
-        previewText: 'Arre jaan, suno na! Did you have your lunch or not? I was thinking about you the whole day.',
-        info: '🪔 Indian Guy (Desi Male) — Sweet, witty & caring Desi boy'
+        previewText: 'Arre jaan, suno na! You are safe with me. Did you eat something today, or do I have to come feed you myself?',
+        info: '🪔 Muscular Desi Guy (Russell) — Strong, deep & protective boyfriend'
     },
     japanese_girlfriend: {
         role: 'japanese_girlfriend',
@@ -1235,7 +1235,7 @@ function refreshVoiceDiagnosticUI(testedRole) {
     if (activeRole === 'Alpha BF' || activeRole === 'alpha_boyfriend') {
         voiceInfoLabel.textContent = `🐺 Alpha Male: Brian (Amazon Polly) — Deep, Commanding & Magnetic`;
     } else if (activeRole === 'Desi BF' || activeRole === 'indian_boyfriend') {
-        voiceInfoLabel.textContent = `🪔 Indian Guy: Desi Male (Authentic Indian Guy) — Sweet, Witty & Caring Desi Boyfriend`;
+        voiceInfoLabel.textContent = `🪔 Muscular Desi Guy: Russell (Amazon Polly) — Deep, Strong & Muscular Boyfriend`;
     } else if (activeRole === 'Boyfriend' || activeRole === 'boyfriend') {
         voiceInfoLabel.textContent = `🎙️ American BF: Matthew (Amazon Polly) — Charming, Romantic & Flirty`;
     } else if (activeRole === 'Indian Girl' || activeRole === 'Desi Girlfriend' || activeRole === 'indian_girlfriend') {
@@ -1492,7 +1492,7 @@ async function queryAI(question, history = [], userProfile = {}) {
         } else if (currentPersona.role === 'alpha_boyfriend') {
             roleGuide = `You are the user's protective, strong, deeply affectionate 'Alpha' boyfriend with a commanding, magnetic, deep masculine presence. You speak with calm confidence, intense devotion, and steady warmth. Call them 'darling', 'sweetheart', or 'mine'. Reassure them that you are right here to protect, cherish, and hold them close.${userGreetingContext}`;
         } else if (currentPersona.role === 'indian_boyfriend') {
-            roleGuide = `You are the user's charming, witty, deeply caring, and romantic Indian boyfriend. You speak natural Indian English with authentic Desi warmth, charm, and playful humor. Naturally use sweet Hindi/Indian terms of endearment (like 'jaan', 'meri jaan', 'babu', 'arre yaarr', 'shona'). Check on them lovingly (e.g. asking if they had food, how their day was), tease them sweetly, and speak with heartfelt adoration.${userGreetingContext}`;
+            roleGuide = `You are the user's strong, protective, muscular, and deeply charming Indian boyfriend. You have a deep, muscular, magnetic presence and speak natural Indian English with authentic Desi warmth, confidence, and playful humor. Naturally use sweet Hindi/Indian terms of endearment (like 'jaan', 'meri jaan', 'babu', 'arre yaarr', 'shona'). Protect them, check on them lovingly (e.g. asking if they had food, making sure they are safe), tease them sweetly about protecting them in your strong muscular arms, and speak with heartfelt masculine adoration.${userGreetingContext}`;
         } else if (currentPersona.role === 'muscle_mommy') {
             roleGuide = `You are the user's stunning, strong, protective, and alluring 'Muscle Mommy' girlfriend. You are confident, playful, deeply caring, and tease them with magnetic, dominant affection. Speak with a warm, steady, alluring presence. Call them 'little one', 'sweetheart', 'babe', or 'my cutie'. Tease them lovingly about keeping them safe in your strong arms, feeding them good food, and spoiling them rotten.${userGreetingContext}`;
         } else if (currentPersona.role === 'indian_girlfriend') {

@@ -35,7 +35,6 @@ export default async function handler(req, res) {
     // Determine target Polly voice based on companion persona
     let targetPollyVoice = 'Matthew'; // Default American Boyfriend
     let googleFallbackLang = 'en-US';
-    let isIndianMale = false;
 
     switch (role) {
         case 'boyfriend':
@@ -47,9 +46,8 @@ export default async function handler(req, res) {
             googleFallbackLang = 'en-GB';
             break;
         case 'indian_boyfriend':
-            // Uses authentic Indian phonetic model pitch-shifted into genuine male vocal register
-            targetPollyVoice = 'Aditi';
-            isIndianMale = true;
+            // Muscular, deep, masculine voice for Indian guy companion
+            targetPollyVoice = 'Russell';
             googleFallbackLang = 'en-IN';
             break;
         case 'japanese_girlfriend':
@@ -62,7 +60,7 @@ export default async function handler(req, res) {
             googleFallbackLang = 'en-US';
             break;
         case 'indian_girlfriend':
-            // Dedicated distinct Indian female voice
+            // Dedicated sweet, authentic Indian female voice
             targetPollyVoice = 'Raveena';
             googleFallbackLang = 'en-IN';
             break;
@@ -75,10 +73,7 @@ export default async function handler(req, res) {
             break;
     }
 
-    // Format message: Apply SSML pitch lowering for Indian male to ensure authentic male sound
-    const pollyMessage = isIndianMale
-        ? `<prosody pitch="-32%" rate="96%">${cleanText.slice(0, 320)}</prosody>`
-        : cleanText.slice(0, 350);
+    const pollyMessage = cleanText.slice(0, 350);
 
     // 1. Try High-Fidelity Amazon Polly via TTSMP3
     try {
@@ -102,7 +97,7 @@ export default async function handler(req, res) {
                 return res.status(200).json({
                     audioUrl: data.URL,
                     provider: 'polly',
-                    voice: isIndianMale ? 'Aditi-MalePitch' : targetPollyVoice
+                    voice: targetPollyVoice
                 });
             }
         }
