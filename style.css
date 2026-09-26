@@ -636,6 +636,18 @@ html, body {
     color: #ffb6c1;
 }
 
+.chip-badge.mommy {
+    background: rgba(220, 100, 255, 0.2);
+    border: 1px solid rgba(220, 100, 255, 0.45);
+    color: #ebb8ff;
+}
+
+.chip-badge.desi {
+    background: rgba(255, 170, 50, 0.2);
+    border: 1px solid rgba(255, 170, 50, 0.45);
+    color: #ffd095;
+}
+
 .chip-badge.bestie {
     background: rgba(125, 255, 176, 0.15);
     border: 1px solid rgba(125, 255, 176, 0.35);
@@ -670,16 +682,16 @@ html, body {
 
 /* Voice Preview & Diagnostics */
 .voice-test-actions {
-    display: flex;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
     margin-top: 4px;
 }
 
 .test-voice-btn {
-    flex: 1;
-    padding: 7px 10px;
+    padding: 6px 8px;
     border-radius: 8px;
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 600;
     cursor: pointer;
     display: inline-flex;
@@ -710,6 +722,28 @@ html, body {
 .test-voice-btn.gf:hover {
     background: rgba(255, 105, 180, 0.25);
     box-shadow: 0 0 10px rgba(255, 105, 180, 0.35);
+}
+
+.test-voice-btn.mommy {
+    background: rgba(220, 100, 255, 0.12);
+    border: 1px solid rgba(220, 100, 255, 0.35);
+    color: #ebb8ff;
+}
+
+.test-voice-btn.mommy:hover {
+    background: rgba(220, 100, 255, 0.25);
+    box-shadow: 0 0 10px rgba(220, 100, 255, 0.35);
+}
+
+.test-voice-btn.desi {
+    background: rgba(255, 170, 50, 0.12);
+    border: 1px solid rgba(255, 170, 50, 0.35);
+    color: #ffd095;
+}
+
+.test-voice-btn.desi:hover {
+    background: rgba(255, 170, 50, 0.25);
+    box-shadow: 0 0 10px rgba(255, 170, 50, 0.35);
 }
 
 .voice-info-box {

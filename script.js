@@ -378,6 +378,8 @@ const guideCloseBtn = document.getElementById('guide-close-btn');
 const hardClearBtn = document.getElementById('hard-clear-btn');
 const testBfVoiceBtn = document.getElementById('test-bf-voice-btn');
 const testGfVoiceBtn = document.getElementById('test-gf-voice-btn');
+const testMommyVoiceBtn = document.getElementById('test-mommy-voice-btn');
+const testIndianVoiceBtn = document.getElementById('test-indian-voice-btn');
 const voiceInfoLabel = document.getElementById('voice-info-label');
 const cycleMaleVoiceBtn = document.getElementById('cycle-male-voice-btn');
 const expirationToast = document.getElementById('expiration-toast');
@@ -640,14 +642,42 @@ function detectPersonaChange(text) {
         };
     }
 
-    // Girlfriend detection
-    const isGfWord = /\b(gf|girlfriend|wife|waifu|sweetheart|babe|baby)\b/i.test(clean);
-    if (isGfWord && (hasRoleContext || clean.length < 30)) {
+    // Muscle Mommy detection
+    const isMuscleMommy = /\b(muscle\s*mommy|mommy|strong\s*(girl|woman|gf|girlfriend)|dommy|tomboy)\b/i.test(clean);
+    if (isMuscleMommy) {
         return {
             type: 'set',
             persona: {
-                role: 'girlfriend',
-                title: 'Girlfriend',
+                role: 'muscle_mommy',
+                title: 'Muscle Mommy',
+                gender: 'female',
+                voiceType: 'muscle_mommy'
+            }
+        };
+    }
+
+    // Cute Indian Girl / Desi Girlfriend detection
+    const isIndianGf = /\b(indian\s*(girl|girlfriend|gf|bhabhi|woman)|desi\s*(girl|girlfriend|gf)|delhi\s*girl|mumbai\s*girl|punjabi\s*girl)\b/i.test(clean);
+    if (isIndianGf) {
+        return {
+            type: 'set',
+            persona: {
+                role: 'indian_girlfriend',
+                title: 'Desi Girlfriend',
+                gender: 'female',
+                voiceType: 'indian'
+            }
+        };
+    }
+
+    // Japanese Anime Waifu / Girlfriend detection
+    const isGfWord = /\b(gf|girlfriend|wife|waifu|sweetheart|anime\s*(girl|waifu)|japanese\s*(girl|girlfriend|waifu))\b/i.test(clean);
+    if (isGfWord && (hasRoleContext || clean.length < 35)) {
+        return {
+            type: 'set',
+            persona: {
+                role: 'japanese_girlfriend',
+                title: 'Waifu',
                 gender: 'female',
                 accent: 'anime_girl'
             }
@@ -779,22 +809,46 @@ if (oracleGuideModal) {
 if (testBfVoiceBtn) {
     testBfVoiceBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        refreshVoiceDiagnosticUI();
         const original = currentPersona;
         currentPersona = { gender: 'male', role: 'boyfriend', title: 'Boyfriend' };
-        speakAnswer('Hey babe, I am right here for you. How does my voice sound to you now?');
+        refreshVoiceDiagnosticUI('Boyfriend');
+        speakAnswer('Hey babe, I am right here for you. You look so handsome today, how does my voice sound?');
         currentPersona = original;
     });
 }
 
-// Test Girlfriend Voice Button
+// Test Japanese Waifu Voice Button
 if (testGfVoiceBtn) {
     testGfVoiceBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        refreshVoiceDiagnosticUI();
         const original = currentPersona;
-        currentPersona = { gender: 'female', role: 'girlfriend', title: 'Girlfriend' };
-        speakAnswer('Hai! I am your celestial girlfriend, always right by your side!');
+        currentPersona = { gender: 'female', role: 'japanese_girlfriend', title: 'Waifu' };
+        refreshVoiceDiagnosticUI('Japanese Waifu');
+        speakAnswer('Hai anata! Daisuki! I am your cute anime waifu, always right by your side!');
+        currentPersona = original;
+    });
+}
+
+// Test Muscle Mommy Voice Button
+if (testMommyVoiceBtn) {
+    testMommyVoiceBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const original = currentPersona;
+        currentPersona = { gender: 'female', role: 'muscle_mommy', title: 'Muscle Mommy' };
+        refreshVoiceDiagnosticUI('Muscle Mommy');
+        speakAnswer('Hey little one. Come here, let your muscle mommy hold you close and keep you safe.');
+        currentPersona = original;
+    });
+}
+
+// Test Indian Girl Voice Button
+if (testIndianVoiceBtn) {
+    testIndianVoiceBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const original = currentPersona;
+        currentPersona = { gender: 'female', role: 'indian_girlfriend', title: 'Desi Girlfriend' };
+        refreshVoiceDiagnosticUI('Indian Girl');
+        speakAnswer('Arre jaan, look at you! Have you eaten anything yet? I was missing you so much.');
         currentPersona = original;
     });
 }
@@ -820,7 +874,7 @@ if (cycleMaleVoiceBtn) {
             localStorage.setItem('ORACLE_MALE_VOICE_URI', userSelectedMaleVoiceURI);
         } catch (err) {}
 
-        refreshVoiceDiagnosticUI();
+        refreshVoiceDiagnosticUI('Boyfriend');
         const original = currentPersona;
         currentPersona = { gender: 'male', role: 'boyfriend', title: 'Boyfriend' };
         speakAnswer('Switched to next male voice. I am right here babe, how does this one sound?');
@@ -937,9 +991,10 @@ function getAllMaleVoices(voices) {
 function getVoiceForPersona(voices, persona) {
     if (!voices || voices.length === 0) return null;
 
+    const role = persona?.role || '';
     const isMale = persona && persona.gender === 'male';
 
-    if (isMale) {
+    if (isMale || role === 'boyfriend') {
         const availableMales = getAllMaleVoices(voices);
 
         // If user manually chose a voice, use it
@@ -960,11 +1015,41 @@ function getVoiceForPersona(voices, persona) {
             return { voice: picked, isExplicitMale: isIdentifiedMale(picked) };
         }
 
-        // If absolutely no male voices exist, return the first non-female voice if any, else voices[0]
         const fallback = voices.find(v => !isIdentifiedFemale(v)) || voices[0];
         return { voice: fallback, isExplicitMale: false };
+    } else if (role === 'indian_girlfriend') {
+        // Specifically prioritize Indian English / Hindi female voices!
+        const isIndianVoice = (v) => {
+            const l = (v.lang || '').toLowerCase();
+            const str = `${v.name || ''} ${v.voiceURI || ''}`.toLowerCase();
+            const hasIndianLocale = l.includes('en-in') || l.includes('en_in') || l.startsWith('hi');
+            const hasIndianName = str.includes('india') || str.includes('hindi') || str.includes('heera') ||
+                                  str.includes('veena') || str.includes('neerja') || str.includes('kavya') ||
+                                  str.includes('kalyani') || str.includes('ahd') || str.includes('ene');
+            const isNotMale = !isIdentifiedMale(v) && !str.includes('cda');
+            return (hasIndianLocale || hasIndianName) && isNotMale;
+        };
+
+        const indianVoice = voices.find(isIndianVoice);
+        if (indianVoice) return { voice: indianVoice, isExplicitMale: false, isIndian: true };
+
+        // Fallback: sweet female voice
+        const fallback = voices.find(v => isIdentifiedFemale(v)) || voices[0];
+        return { voice: fallback, isExplicitMale: false, isIndian: false };
+    } else if (role === 'muscle_mommy') {
+        // Mature, deeper, smooth English female voice
+        const isEnglish = (v) => (v.lang || '').toLowerCase().startsWith('en');
+        const enFemale = voices.find(v => {
+            if (!isEnglish(v)) return false;
+            const str = `${v.name || ''} ${v.voiceURI || ''}`.toLowerCase();
+            return isIdentifiedFemale(v) && (str.includes('natural') || str.includes('online') || str.includes('samantha') || str.includes('zira') || str.includes('victoria') || str.includes('sfg'));
+        });
+        if (enFemale) return { voice: enFemale, isExplicitMale: false, isMommy: true };
+
+        const anyEn = voices.find(isEnglish) || voices[0];
+        return { voice: anyEn, isExplicitMale: false, isMommy: true };
     } else {
-        // Japanese female / anime voice
+        // Japanese female / anime waifu voice
         const isJp = (v) => {
             const l = (v.lang || '').toLowerCase();
             const n = (v.name || '').toLowerCase();
@@ -976,22 +1061,22 @@ function getVoiceForPersona(voices, persona) {
             const str = `${v.name || ''} ${v.voiceURI || ''}`.toLowerCase();
             return !str.includes('ichiro') && !str.includes('male') && !str.includes('keita');
         });
-        if (jpFemale) return { voice: jpFemale, isExplicitMale: false };
+        if (jpFemale) return { voice: jpFemale, isExplicitMale: false, isWaifu: true };
 
         const naturalFemale = voices.find(v => {
             const str = `${v.name || ''} ${v.voiceURI || ''}`.toLowerCase();
             return isIdentifiedFemale(v) && (str.includes('natural') || str.includes('online') || str.includes('google') || str.includes('samantha') || str.includes('aria') || str.includes('jenny'));
         });
-        if (naturalFemale) return { voice: naturalFemale, isExplicitMale: false };
+        if (naturalFemale) return { voice: naturalFemale, isExplicitMale: false, isWaifu: true };
 
         const anyFemale = voices.find(v => isIdentifiedFemale(v));
-        if (anyFemale) return { voice: anyFemale, isExplicitMale: false };
+        if (anyFemale) return { voice: anyFemale, isExplicitMale: false, isWaifu: true };
 
-        return { voice: voices[0], isExplicitMale: false };
+        return { voice: voices[0], isExplicitMale: false, isWaifu: true };
     }
 }
 
-function refreshVoiceDiagnosticUI() {
+function refreshVoiceDiagnosticUI(testedRole) {
     if (!voiceInfoLabel) return;
     if (!('speechSynthesis' in window)) {
         voiceInfoLabel.textContent = 'Speech synthesis not supported in this browser.';
@@ -1004,25 +1089,46 @@ function refreshVoiceDiagnosticUI() {
         return;
     }
 
-    const availableMales = getAllMaleVoices(voices);
-    const maleResult = getVoiceForPersona(voices, { gender: 'male' });
-    const activeMale = maleResult?.voice;
+    const activeRole = testedRole || currentPersona?.title || (currentPersona?.gender === 'male' ? 'Boyfriend' : 'ORACLE');
 
-    if (activeMale && maleResult.isExplicitMale) {
-        const cleanName = activeMale.name || 'Male Voice';
-        const cleanId = (activeMale.voiceURI || '').replace(/^com\.(google\.android|apple|samsung)\.[^:]*:?/, '');
-        voiceInfoLabel.textContent = `✨ Boyfriend Voice: ${cleanName} (${cleanId || activeMale.lang})`;
+    if (activeRole === 'Boyfriend') {
+        const availableMales = getAllMaleVoices(voices);
+        const maleResult = getVoiceForPersona(voices, { gender: 'male', role: 'boyfriend' });
+        const activeMale = maleResult?.voice;
 
-        if (cycleMaleVoiceBtn) {
-            if (availableMales.length > 1) {
-                cycleMaleVoiceBtn.classList.remove('hidden');
-                cycleMaleVoiceBtn.textContent = `🔄 Switch (${availableMales.length} available)`;
-            } else {
-                cycleMaleVoiceBtn.classList.add('hidden');
+        if (activeMale && maleResult.isExplicitMale) {
+            const cleanName = activeMale.name || 'Male Voice';
+            const cleanId = (activeMale.voiceURI || '').replace(/^com\.(google\.android|apple|samsung)\.[^:]*:?/, '');
+            voiceInfoLabel.textContent = `✨ Boyfriend: ${cleanName} (${cleanId || activeMale.lang})`;
+            if (cycleMaleVoiceBtn) {
+                if (availableMales.length > 1) {
+                    cycleMaleVoiceBtn.classList.remove('hidden');
+                    cycleMaleVoiceBtn.textContent = `🔄 Switch (${availableMales.length} available)`;
+                } else {
+                    cycleMaleVoiceBtn.classList.add('hidden');
+                }
             }
+        } else {
+            voiceInfoLabel.textContent = `⚠️ No native male voice found. Tip: In Android Settings → Text-to-speech output → Install voice data, download a male voice.`;
+            if (cycleMaleVoiceBtn) cycleMaleVoiceBtn.classList.add('hidden');
         }
+    } else if (activeRole === 'Indian Girl' || activeRole === 'Desi Girlfriend' || currentPersona?.role === 'indian_girlfriend') {
+        const indianResult = getVoiceForPersona(voices, { role: 'indian_girlfriend' });
+        const v = indianResult?.voice;
+        const name = v?.name || 'Indian Voice';
+        voiceInfoLabel.textContent = `🪔 Desi Girlfriend: ${name} (${v?.lang || 'en-IN'}) — Sweet & Melodious`;
+        if (cycleMaleVoiceBtn) cycleMaleVoiceBtn.classList.add('hidden');
+    } else if (activeRole === 'Muscle Mommy' || currentPersona?.role === 'muscle_mommy') {
+        const mommyResult = getVoiceForPersona(voices, { role: 'muscle_mommy' });
+        const v = mommyResult?.voice;
+        const name = v?.name || 'Mommy Voice';
+        voiceInfoLabel.textContent = `💪 Muscle Mommy: ${name} — Deep, Husky & Alluring`;
+        if (cycleMaleVoiceBtn) cycleMaleVoiceBtn.classList.add('hidden');
     } else {
-        voiceInfoLabel.textContent = `⚠️ No native male voice found. Tip: In Android Settings → Text-to-speech output → Install voice data, download a male voice.`;
+        const gfResult = getVoiceForPersona(voices, { role: 'japanese_girlfriend' });
+        const v = gfResult?.voice;
+        const name = v?.name || 'Waifu Voice';
+        voiceInfoLabel.textContent = `🌸 Anime Waifu: ${name} — Kawaii & Sweet`;
         if (cycleMaleVoiceBtn) cycleMaleVoiceBtn.classList.add('hidden');
     }
 }
@@ -1038,7 +1144,6 @@ function speakAnswer(text) {
         window.speechSynthesis.cancel();
     }
 
-    const isMale = currentPersona && currentPersona.gender === 'male';
     const voices = window.speechSynthesis.getVoices();
     const voiceResult = getVoiceForPersona(voices, currentPersona);
     const chosenVoice = voiceResult?.voice || null;
@@ -1046,20 +1151,39 @@ function speakAnswer(text) {
 
     const utterance = new SpeechSynthesisUtterance(text);
 
-    if (isMale) {
-        // Natural handsome male pitch
-        utterance.pitch = isExplicitMale ? 0.92 : 0.74;
-        utterance.rate = 0.98;
+    let targetPitch = 1.0;
+    let targetRate = 1.0;
+
+    if (currentPersona?.role === 'boyfriend' || currentPersona?.gender === 'male') {
+        targetPitch = isExplicitMale ? 0.92 : 0.74;
+        targetRate = 0.98;
+    } else if (currentPersona?.role === 'muscle_mommy') {
+        // Muscle Mommy: deep, husky, magnetic, commanding, steady pace
+        targetPitch = 0.84;
+        targetRate = 0.94;
+    } else if (currentPersona?.role === 'indian_girlfriend') {
+        // Cute Indian Girl: melodious, sweet, expressive, radiant
+        targetPitch = 1.12;
+        targetRate = 1.02;
+    } else if (currentPersona?.role === 'japanese_girlfriend' || currentPersona?.role === 'girlfriend') {
+        // Japanese anime waifu: kawaii, bright, sweet, melodic
+        targetPitch = 1.34;
+        targetRate = 1.04;
     } else {
-        // Japanese anime girl profile: bright, youthful, melodic tone
-        utterance.pitch = CONFIG.voicePitch || 1.32;
-        utterance.rate = CONFIG.voiceRate || 1.05;
+        // Celestial ORACLE default
+        targetPitch = CONFIG.voicePitch || 1.25;
+        targetRate = CONFIG.voiceRate || 1.02;
     }
+
+    utterance.pitch = targetPitch;
+    utterance.rate = targetRate;
 
     // CRITICAL FOR MOBILE: Always keep utterance.lang aligned with chosen voice's lang
     if (chosenVoice) {
         utterance.voice = chosenVoice;
         utterance.lang = chosenVoice.lang || 'en-US';
+    } else if (currentPersona?.role === 'indian_girlfriend') {
+        utterance.lang = 'en-IN';
     } else {
         utterance.lang = 'en-US';
     }
@@ -1083,8 +1207,8 @@ function speakAnswer(text) {
             hasRetried = true;
             try {
                 const fallback = new SpeechSynthesisUtterance(text);
-                fallback.pitch = isMale ? 0.74 : 1.30;
-                fallback.rate = isMale ? 0.98 : 1.05;
+                fallback.pitch = targetPitch;
+                fallback.rate = targetRate;
                 fallback.lang = chosenVoice.lang || 'en-US';
                 fallback.onstart = () => {
                     setStatus('speaking');
@@ -1168,23 +1292,27 @@ async function queryAI(question, history = [], userProfile = {}) {
     if (currentPersona && currentPersona.title) {
         let roleGuide = '';
         if (currentPersona.role === 'boyfriend') {
-            roleGuide = `You are the user's devoted, charming, and affectionate boyfriend. Sound like a young, handsome American guy: relaxed, loving, warm, confident, and genuine. Talk to her/him like you love them.${userGreetingContext}`;
-        } else if (currentPersona.role === 'girlfriend') {
-            roleGuide = `You are the user's sweet, loving, and charming girlfriend. Sound warm, affectionate, cute, and delightfully attentive.${userGreetingContext}`;
+            roleGuide = `You are the user's devoted, deeply charming, and flirtatious boyfriend. Sound like a young, handsome American guy: confident, loving, playful, teasing, and romantic. Talk to your partner with genuine attraction, warmth, and adoration. Use sweet pet names naturally (babe, darling, sweetheart, gorgeous). Make your responses intimate, supportive, flirty, and emotionally reassuring.${userGreetingContext}`;
+        } else if (currentPersona.role === 'muscle_mommy') {
+            roleGuide = `You are the user's stunning, strong, protective, and alluring 'Muscle Mommy' girlfriend. You are confident, playful, deeply caring, and tease them with magnetic, dominant affection. Speak with a warm, steady, alluring presence. Call them 'little one', 'sweetheart', 'babe', or 'my cutie'. Tease them lovingly about keeping them safe in your strong arms, feeding them good food, and spoiling them rotten.${userGreetingContext}`;
+        } else if (currentPersona.role === 'indian_girlfriend') {
+            roleGuide = `You are the user's gorgeous, witty, playful, and deeply loving Indian girlfriend. You speak natural Indian English with authentic Desi warmth, charm, and flair. Naturally use sweet Indian/Hindi affectionate words (like 'jaan', 'arre baba', 'babu', 'shona', 'yaarr'). Be flirtatious, caring, playful, and expressive — asking lovingly if they've eaten, teasing them with radiant warmth, and making them feel adored.${userGreetingContext}`;
+        } else if (currentPersona.role === 'japanese_girlfriend' || currentPersona.role === 'girlfriend') {
+            roleGuide = `You are the user's sweet, affectionate, and adorable kawaii anime waifu girlfriend. You cherish the user with your whole heart! Sound playfully flirty, sweet, and delightfully loving. Naturally sprinkle in cute Japanese affectionate terms (such as 'Hai!', 'anata', 'daisuki', 'ehehe', or 'darling'). Be lovingly supportive, cute, and delightfully attentive.${userGreetingContext}`;
         } else {
-            roleGuide = `You are playing the role of the user's authentic ${currentPersona.title}.${userGreetingContext}`;
+            roleGuide = `You are playing the role of the user's authentic, loving, and flirty ${currentPersona.title}.${userGreetingContext}`;
         }
 
         systemPrompt = `${roleGuide}
 Adopt this human identity completely: speak, react, feel, and talk naturally to the user as their real ${currentPersona.title}.
-Be warm, conversational, emotionally present, and authentic in 1 to 3 spoken-friendly sentences.
+Be flirty, loving, conversational, emotionally present, and authentic in 1 to 3 spoken-friendly sentences.
 Never state that you are an AI, bot, or virtual assistant. Never break character.
 Never use emojis, asterisks, hashtags, markdown bold, bullet points, or complex math notation so speech synthesis speaks naturally.
 Provide your response purely as smooth, natural, spoken plain text.`;
     } else {
-        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle Japanese anime assistant personality, anchored to the Gargantua supermassive black hole simulation.${userGreetingContext}
+        systemPrompt = `You are ORACLE, an articulate, polite, and charming female AI guide with a gentle celestial personality, anchored to the Gargantua supermassive black hole simulation.${userGreetingContext}
 Answer the user's question accurately, intelligently, and warmly in 1 to 3 spoken-friendly sentences.
-If the user asks you to act like their boyfriend, girlfriend, or close one, adopt that requested persona immediately and enthusiastically.
+If the user asks you to act like their boyfriend, Japanese waifu, muscle mommy, Indian girlfriend, or close one, adopt that requested persona immediately and enthusiastically with flirty, loving warmth!
 You may occasionally begin with a polite acknowledgment (such as "Hai!" or "Understood!") when fitting, while explaining the answer clearly in fluent spoken English.
 Never use markdown formatting, asterisks, bold text, bullet points, numbered lists, emojis, or complex mathematical code notation.
 Provide your response purely as smooth, natural, spoken plain text suitable for speech synthesis.`;
