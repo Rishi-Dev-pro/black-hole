@@ -81,31 +81,45 @@
                         <div class="guide-chips">
                             <div class="guide-chip" data-cmd="act as my boyfriend">
                                 <div class="chip-header">
-                                    <span class="chip-badge bf">Boyfriend</span>
+                                    <span class="chip-badge bf">American BF</span>
                                     <code>"Act as my boyfriend"</code>
                                 </div>
-                                <small>Loving, handsome American guy voice — flirty & charming</small>
+                                <small>Loving, handsome American guy — flirty, charming & romantic</small>
+                            </div>
+                            <div class="guide-chip" data-cmd="act as my alpha boyfriend">
+                                <div class="chip-header">
+                                    <span class="chip-badge bf">Alpha BF</span>
+                                    <code>"Act as my alpha boyfriend"</code>
+                                </div>
+                                <small>Deep, commanding, magnetic voice — protective & devoted</small>
+                            </div>
+                            <div class="guide-chip" data-cmd="act as my indian boyfriend">
+                                <div class="chip-header">
+                                    <span class="chip-badge desi">Indian BF</span>
+                                    <code>"Act as my Indian boyfriend"</code>
+                                </div>
+                                <small>Sweet, witty Desi boyfriend — warm authentic Indian guy</small>
                             </div>
                             <div class="guide-chip" data-cmd="act as my anime waifu girlfriend">
                                 <div class="chip-header">
                                     <span class="chip-badge gf">Japanese Waifu</span>
                                     <code>"Act as my anime waifu"</code>
                                 </div>
-                                <small>Sweet, affectionate anime girl voice — kawaii & playful</small>
+                                <small>Sweet, affectionate anime girl — kawaii, bright & playful</small>
                             </div>
                             <div class="guide-chip" data-cmd="act as my muscle mommy">
                                 <div class="chip-header">
                                     <span class="chip-badge mommy">Muscle Mommy</span>
                                     <code>"Act as my muscle mommy"</code>
                                 </div>
-                                <small>Dominant, protective, deep alluring voice — magnetic & caring</small>
+                                <small>Dominant, protective, deep alluring woman — magnetic & caring</small>
                             </div>
                             <div class="guide-chip" data-cmd="act as my cute indian girlfriend">
                                 <div class="chip-header">
                                     <span class="chip-badge desi">Indian Girl</span>
                                     <code>"Act as my Indian girlfriend"</code>
                                 </div>
-                                <small>Sweet, beautiful Desi girlfriend with authentic Indian accent</small>
+                                <small>Sweet, beautiful Desi girlfriend — authentic Indian accent</small>
                             </div>
                             <div class="guide-chip" data-cmd="be my best friend">
                                 <div class="chip-header">
@@ -130,27 +144,54 @@
                         <p class="guide-text">Simply say <code class="inline-code">"My name is Alex"</code> or <code class="inline-code">"Call me Maya"</code>. Your companion will remember and lovingly address you by name across all turns.</p>
                     </div>
 
-                    <!-- Voice Preview & Diagnostics -->
+                    <!-- Voice Preview & Character Selection -->
                     <div class="guide-section">
-                        <div class="guide-section-title">🔊 Voice Preview & Testing</div>
-                        <p class="guide-text">Test each companion voice currently detected on this phone:</p>
+                        <div class="guide-section-title">🔊 Companion Voices & Selection</div>
+                        <p class="guide-text">Tap any voice to hear their sound, then tap the confirm button to switch both personality & voice:</p>
+                        
+                        <!-- Boys Section -->
+                        <div class="voice-category-title">
+                            <span>👦 Boy Voices</span>
+                        </div>
                         <div class="voice-test-actions">
-                            <button id="test-bf-voice-btn" class="test-voice-btn bf" type="button">
-                                <span>🎙️ Boyfriend</span>
+                            <button id="test-bf-voice-btn" class="test-voice-btn bf" type="button" data-role="boyfriend" data-gender="male" data-title="Boyfriend">
+                                <span>🎙️ American BF</span>
                             </button>
-                            <button id="test-gf-voice-btn" class="test-voice-btn gf" type="button">
-                                <span>🌸 Waifu</span>
+                            <button id="test-alpha-voice-btn" class="test-voice-btn bf alpha" type="button" data-role="alpha_boyfriend" data-gender="male" data-title="Alpha BF">
+                                <span>🐺 Alpha Male</span>
                             </button>
-                            <button id="test-mommy-voice-btn" class="test-voice-btn mommy" type="button">
-                                <span>💪 Mommy</span>
+                            <button id="test-desi-boy-voice-btn" class="test-voice-btn bf desi-boy" type="button" data-role="indian_boyfriend" data-gender="male" data-title="Desi BF">
+                                <span>🪔 Indian Guy</span>
                             </button>
-                            <button id="test-indian-voice-btn" class="test-voice-btn desi" type="button">
+                        </div>
+
+                        <!-- Girls Section -->
+                        <div class="voice-category-title">
+                            <span>👧 Girl Voices</span>
+                        </div>
+                        <div class="voice-test-actions">
+                            <button id="test-gf-voice-btn" class="test-voice-btn gf" type="button" data-role="japanese_girlfriend" data-gender="female" data-title="Waifu">
+                                <span>🌸 Anime Waifu</span>
+                            </button>
+                            <button id="test-mommy-voice-btn" class="test-voice-btn mommy" type="button" data-role="muscle_mommy" data-gender="female" data-title="Muscle Mommy">
+                                <span>💪 Muscle Mommy</span>
+                            </button>
+                            <button id="test-indian-voice-btn" class="test-voice-btn desi" type="button" data-role="indian_girlfriend" data-gender="female" data-title="Desi Girlfriend">
                                 <span>🪔 Indian Girl</span>
                             </button>
                         </div>
+
+                        <!-- Selected Voice Info & Small Confirm Button -->
                         <div id="voice-info-display" class="voice-info-box">
-                            <span id="voice-info-label">Tap any voice button above to preview.</span>
-                            <button id="cycle-male-voice-btn" class="cycle-voice-btn hidden" type="button">🔄 Switch Voice</button>
+                            <div class="voice-info-left">
+                                <span id="voice-info-label">Tap any companion voice above to preview.</span>
+                            </div>
+                            <div class="voice-info-actions">
+                                <button id="confirm-voice-btn" class="confirm-voice-btn hidden" type="button">
+                                    <span>✅ Confirm Selection</span>
+                                </button>
+                                <button id="cycle-male-voice-btn" class="cycle-voice-btn hidden" type="button">🔄 Switch</button>
+                            </div>
                         </div>
                     </div>
 
