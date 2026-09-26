@@ -814,44 +814,57 @@ function getVoiceForPersona(voices, persona) {
     const isMale = persona && persona.gender === 'male';
 
     if (isMale) {
-        // Young handsome American boy voice search:
-        // 1. Natural American male voices (Christopher, Guy, Ryan, David, Aaron, Alex, Daniel)
-        const naturalUsMale = voices.find(v => {
+        const isEn = (v) => (v.lang || '').toLowerCase().startsWith('en');
+
+        // 1. High-quality natural American / English male voices by name or ID
+        const naturalMale = voices.find(v => {
+            if (!isEn(v)) return false;
             const name = (v.name || '').toLowerCase();
-            const lang = (v.lang || '').toLowerCase();
-            const isUs = lang.includes('en-us') || lang.includes('en_us') || lang === 'en';
-            const isNamed = name.includes('christopher') || name.includes('guy') || name.includes('ryan') ||
+            const isNamed = name.includes('guy') || name.includes('christopher') || name.includes('ryan') ||
                             name.includes('david') || name.includes('aaron') || name.includes('alex') ||
-                            name.includes('nathan') || name.includes('daniel');
-            return isUs && isNamed && !name.includes('female');
+                            name.includes('daniel') || name.includes('fred') || name.includes('arthur') ||
+                            name.includes('nathan') || name.includes('mark') || name.includes('james') ||
+                            name.includes('george') || name.includes('rishi') || name.includes('prabhat');
+            return isNamed && !name.includes('female');
         });
-        if (naturalUsMale) return naturalUsMale;
+        if (naturalMale) return { voice: naturalMale, isExplicitMale: true };
 
-        // 2. Android Chrome Google US male voices (tagged with male in name or locale)
+        // 2. Android Google TTS male identifiers & tagged male voices (prefer localService)
         const androidMale = voices.find(v => {
+            if (!isEn(v)) return false;
             const name = (v.name || '').toLowerCase();
-            const lang = (v.lang || '').toLowerCase();
-            const isEn = lang.startsWith('en');
-            const hasMaleTag = name.includes('male') || name.includes('#male') || name.includes('m-') || name.includes('man');
-            return isEn && hasMaleTag && !name.includes('female');
+            // Google TTS voice models ending with -iol, -iom, -iob, -tpd are male!
+            const isGoogleMaleModel = name.includes('-iol-') || name.includes('-iom-') || name.includes('-iob-') || name.includes('-tpd-') ||
+                                      name.endsWith('-iol-local') || name.endsWith('-iom-local') || name.endsWith('-iob-local') || name.endsWith('-tpd-local');
+            const hasMaleTag = name.includes('male') || name.includes('#male') || name.includes('boy');
+            return (isGoogleMaleModel || hasMaleTag) && !name.includes('female');
         });
-        if (androidMale) return androidMale;
+        if (androidMale) return { voice: androidMale, isExplicitMale: true };
 
-        // 3. Any English voice that is not explicitly marked female
-        const generalUsMale = voices.find(v => {
+        // 3. Any English voice with "male" in name
+        const anyExplicitMale = voices.find(v => {
+            if (!isEn(v)) return false;
             const name = (v.name || '').toLowerCase();
-            const lang = (v.lang || '').toLowerCase();
-            const isUs = lang.includes('en-us') || lang.includes('en_us');
-            const isNotFemale = !name.includes('female') && !name.includes('zira') &&
-                                !name.includes('samantha') && !name.includes('victoria') &&
-                                !name.includes('jenny') && !name.includes('aria');
-            return isUs && isNotFemale;
+            return name.includes('male') && !name.includes('female');
         });
-        if (generalUsMale) return generalUsMale;
+        if (anyExplicitMale) return { voice: anyExplicitMale, isExplicitMale: true };
 
-        // 4. Any English voice
-        const anyEn = voices.find(v => (v.lang || '').toLowerCase().startsWith('en') && !v.name.toLowerCase().includes('female'));
-        if (anyEn) return anyEn;
+        // 4. Any local English voice that is not explicitly marked female
+        const localEnNonFemale = voices.find(v => {
+            if (!isEn(v)) return false;
+            const name = (v.name || '').toLowerCase();
+            const isFemale = name.includes('female') || name.includes('zira') || name.includes('samantha') ||
+                             name.includes('victoria') || name.includes('jenny') || name.includes('aria') ||
+                             name.includes('katherine') || name.includes('linda') || name.includes('susan');
+            return !isFemale && (v.localService !== false);
+        });
+        if (localEnNonFemale) return { voice: localEnNonFemale, isExplicitMale: false };
+
+        // 5. Any English voice available
+        const anyEn = voices.find(v => isEn(v));
+        if (anyEn) return { voice: anyEn, isExplicitMale: false };
+
+        return { voice: voices[0], isExplicitMale: false };
     } else {
         // Japanese female / anime voice
         const jpFemale = voices.find(v => {
@@ -863,24 +876,24 @@ function getVoiceForPersona(voices, persona) {
                              name.includes('female') || name.includes('natural');
             return isJp && isFemale;
         });
-        if (jpFemale) return jpFemale;
+        if (jpFemale) return { voice: jpFemale, isExplicitMale: false };
 
         const anyJp = voices.find(v => {
             const name = (v.name || '').toLowerCase();
             const lang = (v.lang || '').toLowerCase();
             return (lang.startsWith('ja') || name.includes('japan')) && !name.includes('ichiro') && !name.includes('male');
         });
-        if (anyJp) return anyJp;
+        if (anyJp) return { voice: anyJp, isExplicitMale: false };
 
         const naturalFemale = voices.find(v => {
             const name = (v.name || '').toLowerCase();
             return (name.includes('natural') || name.includes('online') || name.includes('google')) &&
                    (name.includes('female') || name.includes('jenny') || name.includes('aria') || name.includes('samantha') || name.includes('zira'));
         });
-        if (naturalFemale) return naturalFemale;
-    }
+        if (naturalFemale) return { voice: naturalFemale, isExplicitMale: false };
 
-    return voices[0];
+        return { voice: voices[0], isExplicitMale: false };
+    }
 }
 
 function speakAnswer(text) {
@@ -889,28 +902,41 @@ function speakAnswer(text) {
         return;
     }
 
-    window.speechSynthesis.cancel(); // Cancel any lingering audio
+    // Cancel lingering speech only if actively talking
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+    }
+
+    const isMale = currentPersona && currentPersona.gender === 'male';
+    const voices = window.speechSynthesis.getVoices();
+    const voiceResult = getVoiceForPersona(voices, currentPersona);
+    const chosenVoice = voiceResult?.voice || null;
+    const isExplicitMale = voiceResult?.isExplicitMale || false;
 
     const utterance = new SpeechSynthesisUtterance(text);
-    const isMale = currentPersona && currentPersona.gender === 'male';
 
     if (isMale) {
-        // Young handsome American boy profile: natural, warm, confident resonance
-        utterance.pitch = 1.02;
-        utterance.rate = 1.0;
-        utterance.lang = 'en-US';
+        // If a genuine male voice was found: natural deep pitch (0.90).
+        // If only a default/female voice exists on the phone: pitch down to 0.74
+        // to transform it into a resonant, handsome masculine baritone!
+        utterance.pitch = isExplicitMale ? 0.90 : 0.74;
+        utterance.rate = 0.98;
     } else {
         // Japanese anime girl profile: bright, youthful, melodic tone
         utterance.pitch = CONFIG.voicePitch || 1.32;
         utterance.rate = CONFIG.voiceRate || 1.05;
     }
 
-    const voices = window.speechSynthesis.getVoices();
-    const voice = getVoiceForPersona(voices, currentPersona);
-    if (voice) {
-        utterance.voice = voice;
-        if (voice.lang && !isMale) utterance.lang = voice.lang;
+    // CRITICAL FOR MOBILE: Always keep utterance.lang aligned with chosen voice's lang
+    // Mismatched voice.lang and utterance.lang will cause Android TTS to reject playback!
+    if (chosenVoice) {
+        utterance.voice = chosenVoice;
+        utterance.lang = chosenVoice.lang || 'en-US';
+    } else {
+        utterance.lang = 'en-US';
     }
+
+    let hasRetried = false;
 
     utterance.onstart = () => {
         setStatus('speaking');
@@ -922,7 +948,35 @@ function speakAnswer(text) {
         if (voicePauseBtn) voicePauseBtn.classList.add('hidden');
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (e) => {
+        console.warn('SpeechSynthesis error on chosen voice:', e);
+        // MOBILE FAILSAFE: If a specific voice failed (uninstalled or network issue on phone),
+        // instantly retry with the clean native system default voice so audio NEVER drops!
+        if (!hasRetried && chosenVoice) {
+            hasRetried = true;
+            try {
+                const fallback = new SpeechSynthesisUtterance(text);
+                fallback.pitch = isMale ? 0.74 : 1.30;
+                fallback.rate = isMale ? 0.98 : 1.05;
+                fallback.lang = chosenVoice.lang || 'en-US';
+                fallback.onstart = () => {
+                    setStatus('speaking');
+                    if (voicePauseBtn) voicePauseBtn.classList.remove('hidden');
+                };
+                fallback.onend = fallback.onerror = () => {
+                    setStatus('idle');
+                    if (voicePauseBtn) voicePauseBtn.classList.add('hidden');
+                };
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
+                window.speechSynthesis.speak(fallback);
+                return;
+            } catch (retryErr) {
+                console.warn('Fallback speech attempt failed:', retryErr);
+            }
+        }
+
         setStatus('idle');
         if (voicePauseBtn) voicePauseBtn.classList.add('hidden');
     };
@@ -1287,11 +1341,17 @@ if (micBtn) {
     });
 }
 
-// Pre-load voices for SpeechSynthesis if supported
+// Pre-load voices for SpeechSynthesis if supported (and warm up on mobile touch)
 if ('speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.getVoices();
     };
+    window.speechSynthesis.getVoices();
+
+    const warmUpMobileAudio = () => {
+        window.speechSynthesis.getVoices();
+    };
+    document.addEventListener('touchstart', warmUpMobileAudio, { passive: true, once: true });
 }
 
 /* ------------------------------------------------------------
