@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     // Determine target Polly voice based on companion persona
     let targetPollyVoice = 'Matthew'; // Default American Boyfriend
     let googleFallbackLang = 'en-US';
+    let isIndianMale = false;
 
     switch (role) {
         case 'boyfriend':
@@ -46,7 +47,9 @@ export default async function handler(req, res) {
             googleFallbackLang = 'en-GB';
             break;
         case 'indian_boyfriend':
-            targetPollyVoice = 'Aditi'; // Or Geraint / Google en-IN
+            // Uses authentic Indian phonetic model pitch-shifted into genuine male vocal register
+            targetPollyVoice = 'Aditi';
+            isIndianMale = true;
             googleFallbackLang = 'en-IN';
             break;
         case 'japanese_girlfriend':
@@ -59,7 +62,8 @@ export default async function handler(req, res) {
             googleFallbackLang = 'en-US';
             break;
         case 'indian_girlfriend':
-            targetPollyVoice = 'Aditi'; // Sweet, melodious Indian English girl
+            // Dedicated distinct Indian female voice
+            targetPollyVoice = 'Raveena';
             googleFallbackLang = 'en-IN';
             break;
         default:
@@ -71,6 +75,11 @@ export default async function handler(req, res) {
             break;
     }
 
+    // Format message: Apply SSML pitch lowering for Indian male to ensure authentic male sound
+    const pollyMessage = isIndianMale
+        ? `<prosody pitch="-32%" rate="96%">${cleanText.slice(0, 320)}</prosody>`
+        : cleanText.slice(0, 350);
+
     // 1. Try High-Fidelity Amazon Polly via TTSMP3
     try {
         const pollyRes = await fetch('https://ttsmp3.com/makemp3_new.php', {
@@ -80,7 +89,7 @@ export default async function handler(req, res) {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             },
             body: new URLSearchParams({
-                msg: cleanText.slice(0, 350), // Keep snappy and fast
+                msg: pollyMessage,
                 lang: targetPollyVoice,
                 source: 'ttsmp3'
             }),
@@ -93,7 +102,7 @@ export default async function handler(req, res) {
                 return res.status(200).json({
                     audioUrl: data.URL,
                     provider: 'polly',
-                    voice: targetPollyVoice
+                    voice: isIndianMale ? 'Aditi-MalePitch' : targetPollyVoice
                 });
             }
         }

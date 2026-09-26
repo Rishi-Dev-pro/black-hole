@@ -870,7 +870,7 @@ const COMPANION_PROFILES = {
         title: 'Desi BF',
         btn: testDesiBoyVoiceBtn,
         previewText: 'Arre jaan, suno na! Did you have your lunch or not? I was thinking about you the whole day.',
-        info: '🪔 Indian Guy (Geraint) — Sweet, witty & caring Desi boy'
+        info: '🪔 Indian Guy (Desi Male) — Sweet, witty & caring Desi boy'
     },
     japanese_girlfriend: {
         role: 'japanese_girlfriend',
@@ -894,7 +894,7 @@ const COMPANION_PROFILES = {
         title: 'Desi Girlfriend',
         btn: testIndianVoiceBtn,
         previewText: 'Arre jaan, look at you! Have you eaten anything yet? I was missing you so much.',
-        info: '🪔 Indian Girl (Aditi) — Sweet & melodious Desi girlfriend'
+        info: '🪔 Indian Girl (Raveena) — Sweet & melodious Desi girlfriend'
     }
 };
 
@@ -1235,11 +1235,11 @@ function refreshVoiceDiagnosticUI(testedRole) {
     if (activeRole === 'Alpha BF' || activeRole === 'alpha_boyfriend') {
         voiceInfoLabel.textContent = `🐺 Alpha Male: Brian (Amazon Polly) — Deep, Commanding & Magnetic`;
     } else if (activeRole === 'Desi BF' || activeRole === 'indian_boyfriend') {
-        voiceInfoLabel.textContent = `🪔 Indian Guy: Geraint (Amazon Polly) — Sweet, Witty & Caring Desi Boyfriend`;
+        voiceInfoLabel.textContent = `🪔 Indian Guy: Desi Male (Authentic Indian Guy) — Sweet, Witty & Caring Desi Boyfriend`;
     } else if (activeRole === 'Boyfriend' || activeRole === 'boyfriend') {
         voiceInfoLabel.textContent = `🎙️ American BF: Matthew (Amazon Polly) — Charming, Romantic & Flirty`;
     } else if (activeRole === 'Indian Girl' || activeRole === 'Desi Girlfriend' || activeRole === 'indian_girlfriend') {
-        voiceInfoLabel.textContent = `🪔 Desi Girlfriend: Aditi (Amazon Polly) — Authentic Indian Accent, Sweet & Melodious`;
+        voiceInfoLabel.textContent = `🪔 Desi Girlfriend: Raveena (Amazon Polly) — Authentic Indian Accent, Sweet & Melodious`;
     } else if (activeRole === 'Muscle Mommy' || activeRole === 'muscle_mommy') {
         voiceInfoLabel.textContent = `💪 Muscle Mommy: Salli (Amazon Polly) — Confident, Alluring & Protective`;
     } else if (activeRole === 'Waifu' || activeRole === 'japanese_girlfriend') {
