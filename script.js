@@ -372,6 +372,10 @@ const resetPersonaBtn = document.getElementById('reset-persona-btn');
 const voiceCloseBtn = document.getElementById('voice-close-btn');
 const voicePauseBtn = document.getElementById('voice-pause-btn');
 const voiceClearBtn = document.getElementById('voice-clear-btn');
+const oracleHelpBtn = document.getElementById('oracle-help-btn');
+const oracleGuideModal = document.getElementById('oracle-guide-modal');
+const guideCloseBtn = document.getElementById('guide-close-btn');
+const hardClearBtn = document.getElementById('hard-clear-btn');
 const expirationToast = document.getElementById('expiration-toast');
 const voiceMessages = document.getElementById('voice-messages');
 
@@ -717,6 +721,7 @@ if (voiceCloseBtn) {
     voiceCloseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (voicePanel) voicePanel.classList.add('hidden');
+        if (oracleGuideModal) oracleGuideModal.classList.add('hidden');
         document.body.classList.remove('voice-open');
         stopSpeaking();
     });
@@ -730,6 +735,75 @@ if (resetPersonaBtn) {
         const resetMsg = 'Personality reset back to ORACLE, your celestial guide.';
         renderChatUI();
         speakAnswer(resetMsg);
+    });
+}
+
+// Oracle Guide & Privacy Modal controls ('?' button)
+if (oracleHelpBtn && oracleGuideModal) {
+    oracleHelpBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        oracleGuideModal.classList.toggle('hidden');
+    });
+}
+
+if (guideCloseBtn && oracleGuideModal) {
+    guideCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        oracleGuideModal.classList.add('hidden');
+    });
+}
+
+if (oracleGuideModal) {
+    oracleGuideModal.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const chip = e.target.closest('.guide-chip');
+        if (chip) {
+            const cmd = chip.getAttribute('data-cmd');
+            if (cmd) {
+                oracleGuideModal.classList.add('hidden');
+                askOracle(cmd);
+            }
+        }
+    });
+    oracleGuideModal.addEventListener('dblclick', (e) => e.stopPropagation());
+}
+
+// Hard Clear & Total Rebirth button
+if (hardClearBtn) {
+    hardClearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        stopSpeaking();
+        // 1. Wipe dialogue history & timestamps
+        clearChatHistory();
+        // 2. Wipe active persona
+        savePersona(null);
+        // 3. Wipe user profile & stored names
+        saveUserProfile({});
+        try {
+            localStorage.removeItem('ORACLE_USER_PROFILE');
+        } catch (err) {
+            console.warn('Storage clear error:', err);
+        }
+        // 4. Update UI to pristine default
+        renderChatUI();
+        updatePersonaUI();
+        if (oracleGuideModal) {
+            oracleGuideModal.classList.add('hidden');
+        }
+        // 5. Toast notification of total amnesia & rebirth
+        if (expirationToast) {
+            expirationToast.textContent = '⚡ Total memory wiped clean. I am ready to be reborn as your man or woman whenever you command.';
+            expirationToast.classList.remove('hidden', 'fade-out');
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                expirationToast.classList.add('fade-out');
+                setTimeout(() => {
+                    expirationToast.classList.add('hidden');
+                    expirationToast.classList.remove('fade-out');
+                }, 500);
+            }, 4000);
+        }
+        speakAnswer('All memories have dissolved. I am ready to be reborn as anyone you desire.');
     });
 }
 

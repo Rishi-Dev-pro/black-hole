@@ -65,6 +65,94 @@
 
         <!-- Conversation Panel (appears when mic is used or clicked) -->
         <div id="voice-panel" class="hidden">
+            <!-- Guide & Memory Privacy Modal Overlay (opens when '?' is clicked) -->
+            <div id="oracle-guide-modal" class="oracle-guide-modal hidden" aria-modal="true" role="dialog">
+                <div class="guide-header">
+                    <div class="guide-header-title">
+                        <span>✨ Guide & Privacy</span>
+                    </div>
+                    <button id="guide-close-btn" class="guide-close-btn" title="Close Guide" aria-label="Close Guide">✕</button>
+                </div>
+                <div class="guide-body">
+                    <!-- Personalization & Commands -->
+                    <div class="guide-section">
+                        <div class="guide-section-title">💖 Adopt a Persona</div>
+                        <p class="guide-text">Speak to ORACLE anytime or tap a command below:</p>
+                        <div class="guide-chips">
+                            <div class="guide-chip" data-cmd="act as my boyfriend">
+                                <div class="chip-header">
+                                    <span class="chip-badge bf">Boyfriend</span>
+                                    <code>"Act as my boyfriend"</code>
+                                </div>
+                                <small>Loving, handsome American guy voice</small>
+                            </div>
+                            <div class="guide-chip" data-cmd="act as my girlfriend">
+                                <div class="chip-header">
+                                    <span class="chip-badge gf">Girlfriend</span>
+                                    <code>"Act as my girlfriend"</code>
+                                </div>
+                                <small>Sweet, affectionate Japanese anime waifu voice</small>
+                            </div>
+                            <div class="guide-chip" data-cmd="be my best friend">
+                                <div class="chip-header">
+                                    <span class="chip-badge bestie">Best Friend</span>
+                                    <code>"Be my best friend"</code>
+                                </div>
+                                <small>Warm, candid, supportive companion</small>
+                            </div>
+                            <div class="guide-chip" data-cmd="reset personality">
+                                <div class="chip-header">
+                                    <span class="chip-badge reset">Guide</span>
+                                    <code>"Reset personality"</code>
+                                </div>
+                                <small>Reverts back to cosmic ORACLE</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Name Introductions -->
+                    <div class="guide-section">
+                        <div class="guide-section-title">👤 Teach Your Name</div>
+                        <p class="guide-text">Simply say <code class="inline-code">"My name is Alex"</code> or <code class="inline-code">"Call me Maya"</code>. Your companion will remember and lovingly address you by name across all turns.</p>
+                    </div>
+
+                    <!-- Privacy & Security Guarantee -->
+                    <div class="guide-section">
+                        <div class="guide-section-title">🛡️ Absolute Privacy & Security</div>
+                        <div class="security-card">
+                            <div class="security-item">
+                                <span class="sec-icon">🔒</span>
+                                <div>
+                                    <strong>No Cloud Database</strong>
+                                    <p>Your intimate conversations and voice recordings are never stored on external servers.</p>
+                                </div>
+                            </div>
+                            <div class="security-item">
+                                <span class="sec-icon">⏳</span>
+                                <div>
+                                    <strong>10-Minute Auto-Wipe</strong>
+                                    <p>Dialogue memory in your browser's local storage automatically vanishes after 10 minutes of inactivity.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hard Clear (Total Rebirth) -->
+                    <div class="guide-section hard-clear-section">
+                        <div class="guide-section-title">⚡ Total Amnesia & Rebirth</div>
+                        <p class="guide-text danger-text">
+                            Permanently wipes all conversation memory, forgets your name, and clears the AI's persona back to the default ORACLE guide.
+                        </p>
+                        <p class="guide-text reborn-hint">
+                            🌸 But worry not — your companion can be reborn at any moment as your man or woman whenever you speak the command.
+                        </p>
+                        <button id="hard-clear-btn" class="hard-clear-btn" type="button">
+                            <span>⚡ Hard Clear & Reborn</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="voice-header">
                 <div class="voice-header-left">
                     <span class="voice-title">🔮 ORACLE</span>
@@ -72,10 +160,18 @@
                 </div>
                 <div class="voice-header-actions">
                     <!-- Clear chat history button -->
-                    <button id="voice-clear-btn" class="voice-clear-btn" title="Clear conversation history" aria-label="Clear chat">🗑️ Clear</button>
+                    <button id="voice-clear-btn" class="voice-clear-btn" title="Clear conversation history" aria-label="Clear chat">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Clear</span>
+                    </button>
                     <!-- Pause/Stop button when AI is speaking -->
-                    <button id="voice-pause-btn" class="voice-pause-btn hidden" title="Stop speech" aria-label="Stop speech">⏹ Stop</button>
+                    <button id="voice-pause-btn" class="voice-pause-btn hidden" title="Stop speech" aria-label="Stop speech">
+                        <span class="stop-dot"></span>
+                        <span>Stop</span>
+                    </button>
                     <span id="voice-status" class="status-idle">OFFLINE</span>
+                    <!-- Subtle help '?' button -->
+                    <button id="oracle-help-btn" class="voice-help-btn" title="Oracle Guide & Memory Privacy" aria-label="Help">?</button>
                     <button id="voice-close-btn" class="voice-close-btn" title="Close panel" aria-label="Close panel">✕</button>
                 </div>
             </div>
